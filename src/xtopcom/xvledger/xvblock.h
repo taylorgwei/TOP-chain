@@ -95,6 +95,7 @@ namespace top
             enum_xvblock_type_cmds      = 7, //smart-contract related
             enum_xvblock_type_view      = 8, //view block or timeout block
             enum_xvblock_type_elction   = 9, //election block from REC/ZEC etc
+            enum_xvblock_type_batch     = 10,//that is a batch group(like table or book)
         };
 
         //total 2bits = max 4 definition

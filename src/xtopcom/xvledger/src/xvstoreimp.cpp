@@ -138,8 +138,8 @@ namespace top
                               counting_stored_raw_txs[v->get_tx_hash()] = 1;
                         }
                     }
-                    base::enum_txindex_type txindex_type = base::xvtxkey_t::transaction_subtype_to_txindex_type(v->get_tx_phase_type());
-                    const std::string tx_key = xvdbkey_t::create_tx_index_key(v->get_tx_hash(), txindex_type);
+
+                    const std::string tx_key = xvdbkey_t::create_tx_index_key(v->get_tx_hash(), v->get_tx_phase_type());
                     std::string tx_bin;
                     v->serialize_to_string(tx_bin);
                     xassert(!tx_bin.empty());
@@ -151,7 +151,7 @@ namespace top
                     }
                     else
                     {
-                        xdbg("xvtxstore_t::store_txs_index,store tx to DB for tx_key %s, %d", base::xstring_utl::to_hex(v->get_tx_hash()).c_str(), txindex_type);
+                        xdbg("xvtxstore_t::store_txs_index,store tx to DB for tx_key %s, %d", base::xstring_utl::to_hex(v->get_tx_hash()).c_str(), v->get_tx_phase_type());
                     }
                 }
                 if(has_error)
@@ -167,8 +167,7 @@ namespace top
 
         xauto_ptr<xvtxindex_t> xvtxstore_t::load_tx_idx(const std::string & raw_tx_hash,enum_transaction_subtype type)
         {
-            base::enum_txindex_type txindex_type = base::xvtxkey_t::transaction_subtype_to_txindex_type(type);
-            const std::string tx_idx_key = xvdbkey_t::create_tx_index_key(raw_tx_hash, txindex_type);
+            const std::string tx_idx_key = xvdbkey_t::create_tx_index_key(raw_tx_hash, type);
             const std::string tx_idx_bin = base::xvchain_t::instance().get_xdbstore()->get_value(tx_idx_key);
             if(tx_idx_bin.empty())
             {

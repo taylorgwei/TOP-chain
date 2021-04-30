@@ -17,9 +17,9 @@ namespace top
         }
 
         //tx index ->link to block index
-        const std::string  xvdbkey_t::create_tx_index_key(const std::string & org_tx_hash, const enum_txindex_type type)
+        const std::string  xvdbkey_t::create_tx_index_key(const std::string & org_tx_hash, const uint8_t index_type)
         {
-            const std::string key_path = "t/" + org_tx_hash + "/" + xstring_utl::tostring(type);
+            const std::string key_path = "t/" + org_tx_hash + "/" + xstring_utl::tostring(index_type);
             return key_path;
         }
 

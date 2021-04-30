@@ -104,6 +104,8 @@ int test_sync_vstore(store::xsyncvstore_t* sync_store)
         
         if(loaded_block->check_block_flag(base::enum_xvblock_flag_committed))
             sync_store->get_vblockstore()->execute_block(test_account_obj,loaded_block.get());//push block as random order
+        
+        //sync_store->get_vblockstore()->delete_block(test_account_obj, loaded_block.get());
     }
 #endif
     

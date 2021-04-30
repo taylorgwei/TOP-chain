@@ -11,20 +11,12 @@ namespace top
 {
     namespace base
     {
-       enum enum_txindex_type
-       {
-           enum_txindex_type_main     = 0x00,  //main entry if need(optional)
-           enum_txindex_type_send     = 0x01,
-           enum_txindex_type_receive  = 0x02,
-           enum_txindex_type_confirm  = 0x04,
-       };
-
        class xvdbkey_t
        {
         public:
            //tx index ->link to block index
            static const std::string  create_tx_key(const std::string & org_tx_hash); //where the raw tx are placed
-           static const std::string  create_tx_index_key(const std::string & org_tx_hash, const enum_txindex_type type);
+           static const std::string  create_tx_index_key(const std::string & org_tx_hash, const uint8_t index_type);
 
            //block-index ->linke block-object,block-state,block-offdata
            static const std::string  create_block_index_key(const xvaccount_t & account,const uint64_t target_height);//main entry

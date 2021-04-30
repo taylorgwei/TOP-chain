@@ -121,8 +121,8 @@ xevent_queue_ptr_t xmessage_bus_t::get_queue(int major_type) {
 }
 
 //XTODO,add implmentation for below
-xevent_ptr_t  xmessage_bus_t::create_event_for_store_index_to_db(const std::string & account, base::xvbindex_t * target_index) {
-    if (account != sys_contract_beacon_timer_addr) {
+xevent_ptr_t  xmessage_bus_t::create_event_for_store_index_to_db(base::xvbindex_t * target_index) {
+    if (target_index->get_account_addr() != sys_contract_beacon_timer_addr) {
         return  make_object_ptr<mbus::xevent_store_block_to_db_t>(account, target_index, true);
     } else {
         return nullptr;

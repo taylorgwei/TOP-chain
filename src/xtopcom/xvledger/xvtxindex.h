@@ -22,11 +22,11 @@ namespace top
         };
 
         // the tx key include tx hash and tx subtype
-        class xvtxkey_t {
+        class xvtxkey_t
+        {
         public:
             static std::string          transaction_subtype_to_string(enum_transaction_subtype type);
             static std::string          transaction_hash_subtype_to_string(const std::string & txhash, enum_transaction_subtype type);
-            static enum_txindex_type    transaction_subtype_to_txindex_type(enum_transaction_subtype type);
         public:
             xvtxkey_t() = default;
             xvtxkey_t(const std::string & txhash, enum_transaction_subtype subtype)
@@ -76,12 +76,13 @@ namespace top
             inline bool                        is_self_tx() const {return m_tx_phase_type == enum_transaction_subtype_self;}
 
             inline xdataunit_t*                get_tx_obj()         const {return m_raw_tx_obj;}
+            
         protected:
             virtual int32_t    do_write(base::xstream_t & stream) override;
             virtual int32_t    do_read(base::xstream_t & stream) override;
 
         private:
-            xdataunit_t*                m_raw_tx_obj{nullptr};//optional
+            xdataunit_t*                m_raw_tx_obj;   //optional
             std::string                 m_block_addr;   //associated block 'address
             std::string                 m_block_hash;   //associated block 'hash
             uint64_t                    m_block_height; //associated block 'height

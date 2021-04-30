@@ -11,7 +11,8 @@ namespace top
 {
     namespace base
     {
-        std::string xvtxkey_t::transaction_subtype_to_string(enum_transaction_subtype type) {
+        std::string xvtxkey_t::transaction_subtype_to_string(enum_transaction_subtype type)
+        {
             switch (type) {
                 case enum_transaction_subtype_self: return "self";
                 case enum_transaction_subtype_send: return "send";
@@ -24,45 +25,39 @@ namespace top
             }
         }
 
-        std::string xvtxkey_t::transaction_hash_subtype_to_string(const std::string & txhash, enum_transaction_subtype type) {
+        std::string xvtxkey_t::transaction_hash_subtype_to_string(const std::string & txhash, enum_transaction_subtype type)
+        {
             return base::xstring_utl::to_hex(txhash) + ":" + transaction_subtype_to_string(type);
         }
 
-        enum_txindex_type xvtxkey_t::transaction_subtype_to_txindex_type(enum_transaction_subtype type) {
-            switch (type) {
-                case enum_transaction_subtype_self: return enum_txindex_type_send;
-                case enum_transaction_subtype_send: return enum_txindex_type_send;
-                case enum_transaction_subtype_recv: return enum_txindex_type_receive;
-                case enum_transaction_subtype_confirm: return enum_txindex_type_confirm;
-                default: {
-                    xassert(0);
-                    return enum_txindex_type_send;
-                }
-            }
-        }
-
-        std::string xvtxkey_t::get_tx_dump_key() const {
+        std::string xvtxkey_t::get_tx_dump_key() const
+        {
             return transaction_hash_subtype_to_string(m_txhash, m_subtype);
         }
 
-        uint256_t xvtxkey_t::get_tx_hash_256() const {
+        uint256_t xvtxkey_t::get_tx_hash_256() const
+        {
             return uint256_t((uint8_t*)m_txhash.data());
         }
-        std::string xvtxkey_t::get_tx_hex_hash() const {
+        std::string xvtxkey_t::get_tx_hex_hash() const
+        {
             return base::xstring_utl::to_hex(m_txhash);
         }
-        std::string xvtxkey_t::get_tx_subtype_str() const {
+        std::string xvtxkey_t::get_tx_subtype_str() const
+        {
             return transaction_subtype_to_string(m_subtype);
         }
 
-        int32_t xvtxkey_t::do_write(base::xstream_t & stream) {
+        int32_t xvtxkey_t::do_write(base::xstream_t & stream)
+        {
             const int32_t begin_size = stream.size();
             // use old serialize method for compatibility
             stream << m_txhash;
             stream << (uint8_t)m_subtype;
             return (stream.size() - begin_size);
         }
-        int32_t xvtxkey_t::do_read(base::xstream_t & stream) {
+        int32_t xvtxkey_t::do_read(base::xstream_t & stream)
+        {
             const int32_t begin_size = stream.size();
             stream >> m_txhash;
             uint8_t subtype_uint8;
