@@ -52,8 +52,9 @@ namespace top
             virtual void*         query_interface(const int32_t _enum_xobject_type_) override;//caller need to cast (void*) to related ptr
             //clear canvas assocaited with vbstate and properties,all recored instruction are clear as well
             //note:reset_canvas not modify the actua state of properties/block, it just against for instrution on canvas
-            virtual bool          reset_canvas();
-
+            bool                  reset_canvas();
+            bool                  reset_canvas(xvcanvas_t * new_canvas);
+            virtual xvcanvas_t*   get_canvas() const override {return m_state_canvas;}
         public:
             //bin-log related functions
             enum_xerror_code      encode_change_to_binlog(std::string & output_bin);//
@@ -169,6 +170,7 @@ namespace top
             enum_xerror_code        encode_change_to_binlog(xvcanvas_t* source_canvas,std::string & output_bin);
 
         private:
+            xvcanvas_t*     m_state_canvas;
             std::string     m_account_addr;
             uint64_t        m_block_height;
             uint64_t        m_block_viewid;

@@ -45,8 +45,8 @@ namespace top
     
         const std::string  xvbstate_t::make_unit_name(const std::string & account, const uint64_t blockheight)
         {
-            const std::string compose_name = account + "." + xstring_utl::tostring(blockheight);
-            return xstring_utl::tostring((uint32_t)xhash64_t::digest(compose_name));//to save space,let use hash32 as unit name for vbstate
+            const std::string compose_name = account + "/" + xstring_utl::tostring(blockheight);
+            return compose_name;
         }
     
         const int   xvbstate_t::get_block_level() const
@@ -67,6 +67,7 @@ namespace top
         xvbstate_t::xvbstate_t(enum_xdata_type type)
             :base(type)
         {
+            m_state_canvas = NULL;
             //init unit name and block height first
             m_block_height = 0;
             m_block_viewid = 0;
@@ -78,9 +79,8 @@ namespace top
             set_unit_name(make_unit_name(std::string(),m_block_height));
             //ask compressed data while serialization
             set_unit_flag(enum_xdata_flag_acompress);
-            
-            xauto_ptr<xvcanvas_t> new_canvas(new xvcanvas_t());
-            set_canvas(new_canvas.get());
+            //setup default canvas
+            reset_canvas();
             
             //then register execution methods
             REGISTER_XVIFUNC_ID_API(enum_xvinstruct_class_state_function);
@@ -89,6 +89,7 @@ namespace top
         xvbstate_t::xvbstate_t(xvblock_t& for_block,xvexeunit_t * parent_unit,enum_xdata_type type)
             :base(type)
         {
+            m_state_canvas = NULL;
             //init unit name and block height first
             m_block_types    = for_block.get_header()->get_block_raw_types();
             m_block_versions = for_block.get_header()->get_block_raw_versions();
@@ -105,9 +106,8 @@ namespace top
             set_unit_name(make_unit_name(m_account_addr,m_block_height));
             //ask compressed data while serialization
             set_unit_flag(enum_xdata_flag_acompress);
-
-            xauto_ptr<xvcanvas_t> new_canvas(new xvcanvas_t());
-            set_canvas(new_canvas.get());
+            //setup default canvas
+            reset_canvas();
             
             //then register execution methods
             REGISTER_XVIFUNC_ID_API(enum_xvinstruct_class_state_function);
@@ -120,6 +120,7 @@ namespace top
         xvbstate_t::xvbstate_t(const std::string & account,const uint64_t block_height,const uint64_t block_viewid,const std::string & last_block_hash,const std::string &last_full_block_hash,const uint64_t last_full_block_height, const uint32_t raw_block_versions,const uint16_t raw_block_types, xvexeunit_t * parent_unit)
             :base((enum_xdata_type)enum_xobject_type_vbstate)
         {
+            m_state_canvas = NULL;
             //init unit name and block height first
             m_block_types    = raw_block_types;
             m_block_versions = raw_block_versions;
@@ -136,9 +137,8 @@ namespace top
             set_unit_name(make_unit_name(m_account_addr,m_block_height));
             //ask compressed data while serialization
             set_unit_flag(enum_xdata_flag_acompress);
-            
-            xauto_ptr<xvcanvas_t> new_canvas(new xvcanvas_t());
-            set_canvas(new_canvas.get());
+            //setup default canvas
+            reset_canvas();
             
             //then register execution methods
             REGISTER_XVIFUNC_ID_API(enum_xvinstruct_class_state_function);
@@ -150,6 +150,7 @@ namespace top
         xvbstate_t::xvbstate_t(const xvbstate_t & obj)
             :base(obj)
         {
+            m_state_canvas = NULL;
             m_block_types    = obj.m_block_types;
             m_block_versions = obj.m_block_versions;
             
@@ -164,10 +165,9 @@ namespace top
             set_unit_name(make_unit_name(m_account_addr,m_block_height)); //set unit name first
             //ask compressed data while serialization
             set_unit_flag(enum_xdata_flag_acompress);
+            //setup default canvas
+            reset_canvas();
             
-            //setup canvas
-            xauto_ptr<xvcanvas_t> new_canvas(new xvcanvas_t());
-            set_canvas(new_canvas.get());
             //then register execution methods
             REGISTER_XVIFUNC_ID_API(enum_xvinstruct_class_state_function);
             
@@ -177,6 +177,8 @@ namespace top
     
         xvbstate_t::~xvbstate_t()
         {
+            if(m_state_canvas != NULL)
+                m_state_canvas->release_ref();
         }
         
         xvexeunit_t* xvbstate_t::clone() //each property is readonly after clone
@@ -207,9 +209,23 @@ namespace top
         //note:reset_canvas not modify the actua state of properties/block, it just against for instrution on canvas
         bool         xvbstate_t::reset_canvas()
         {
-            //setup canvas
-            xauto_ptr<xvcanvas_t> new_canvas(new xvcanvas_t());
-            set_canvas(new_canvas.get());
+            xvcanvas_t * new_canvas = new xvcanvas_t();
+            xvcanvas_t * old_ptr = xatomic_t::xexchange(m_state_canvas, new_canvas);
+            if(old_ptr != nullptr)
+                old_ptr->release_ref();
+            
+            return true;
+        }
+    
+        bool      xvbstate_t::reset_canvas(xvcanvas_t * new_canvas)
+        {
+            if(new_canvas != NULL)
+                new_canvas->add_ref();
+            
+            xvcanvas_t * old_ptr = xatomic_t::xexchange(m_state_canvas, new_canvas);
+            if(old_ptr != nullptr)
+                old_ptr->release_ref();
+            
             return true;
         }
     
@@ -870,7 +886,6 @@ namespace top
                 if(property_obj != NULL)
                 {
                     property_obj->set_unit_name(property_name.get_string());
-                    property_obj->set_canvas(get_canvas());
                     add_child_unit(property_obj);
                     
                     return xvalue_t(enum_xcode_successful);
@@ -1078,14 +1093,14 @@ namespace top
                 xvproperty_t * property_ptr = (xvproperty_t*)it.second;
                 xvmethod_t instruction(renew_property_instruction(property_ptr->get_name(),property_ptr->get_obj_type(),property_ptr->get_value()));
                 
-                if(false == new_canvas->record(this, instruction))
+                if(false == new_canvas->record(instruction))
                 {
                     xerror("xvbstate_t::take_snapshot_to_binlog,abort as property fail to take snapshot,propery(%s)",it.second->dump().c_str());
                     return false;
                 }
             }
             
-            set_canvas(new_canvas.get()); //clean all recorded changes by replacing with new canvas
+            reset_canvas(new_canvas.get()); //clean all recorded changes by replacing with new canvas
             return true;
         }
         

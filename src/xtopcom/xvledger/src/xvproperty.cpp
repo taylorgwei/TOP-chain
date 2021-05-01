@@ -68,10 +68,10 @@ namespace top
             const xvalue_t& orginal_value = ref_valu_obj->get_value();//link the value
 
             xvmethod_t clear_value_instruction(get_execute_uri(),enum_xvinstruct_class_core_function, enum_xvinstruct_core_method_clear_value);
-            target_canvas.record(this, clear_value_instruction);
+            target_canvas.record(clear_value_instruction);
             
             xvmethod_t new_value_instruction(get_execute_uri(),enum_xvinstruct_class_core_function, enum_xvinstruct_core_method_reset_value,(xvalue_t&)orginal_value);
-            target_canvas.record(this, new_value_instruction);
+            target_canvas.record(new_value_instruction);
             
             return true;
         }

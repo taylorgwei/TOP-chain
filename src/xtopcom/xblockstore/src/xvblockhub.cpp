@@ -9,6 +9,7 @@
 #include "xvblockhub.h"
 #include "xvgenesis.h"
 #include "xvledger/xvdbkey.h"
+#include "xvledger/xvboffdata.h"
 
 #ifdef ENABLE_METRICS
     #include "xmetrics/xmetrics.h"
