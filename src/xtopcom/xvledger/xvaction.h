@@ -10,49 +10,47 @@ namespace top
 {
     namespace base
     {
-        //Action is a fucntion-call of contract,which required to execute at the specified "ContractAddr.ContractName.Block-height.*"
+        //xvaction_t is a fucntion-call of contract,which required to execute at uri:"Type/ContractAddr/Version"
+        //xvaction_t is multiple-thread safe
         class xvaction_t : public xvmethod_t
         {
+            friend class xvinentity_t;
         public:
             enum{enum_obj_type = enum_xobject_type_vaction};
         public:
-            xvaction_t(const std::string & caller_addr,const std::string & target_uri,const uint8_t method_type,const std::string & method_name);
-            xvaction_t(const std::string & caller_addr,const std::string & target_uri,const uint8_t method_type,const std::string & method_name,xvalue_t & param);
-            xvaction_t(const std::string & caller_addr,const std::string & target_uri,const uint8_t method_type,const std::string & method_name,xvalue_t & param1,xvalue_t & param2);
-            xvaction_t(const std::string & caller_addr,const std::string & target_uri,const uint8_t method_type,const std::string & method_name,xvalue_t & param1,xvalue_t & param2,xvalue_t & param3);
+            xvaction_t(const std::string & tx_hash,const std::string & caller_addr,const std::string & target_uri,const std::string & method_name);
+            xvaction_t(const std::string & tx_hash,const std::string & caller_addr,const std::string & target_uri,const std::string & method_name,xvalue_t & param);
+            xvaction_t(const std::string & tx_hash,const std::string & caller_addr,const std::string & target_uri,const std::string & method_name,xvalue_t & param1,xvalue_t & param2);
+            xvaction_t(const std::string & tx_hash,const std::string & caller_addr,const std::string & target_uri,const std::string & method_name,xvalue_t & param1,xvalue_t & param2,xvalue_t & param3);
             
             xvaction_t(const xvaction_t & obj);
             xvaction_t(xvaction_t && moved);
-            xvaction_t & operator = (const xvaction_t & obj);
-            xvaction_t & operator = (xvaction_t && moved);
             virtual ~xvaction_t();
             
-        protected:
+        private:
             xvaction_t();
+            xvaction_t & operator = (const xvaction_t & obj);
+            xvaction_t & operator = (xvaction_t && moved); //dont implement it
+            
         public:
             //caller respond to cast (void*) to related  interface ptr
-            virtual void*      query_minterface(const int32_t _enum_xobject_type_) const override;
+            virtual void*       query_minterface(const int32_t _enum_xobject_type_) const override;
             
-            const std::string   get_contract_caller()    const {return get_caller_uri();}
-            const std::string   get_contract_uri()       const {return get_method_uri();}
-            const std::string   get_contract_address()   const {return m_contract_addr;}
-            const std::string   get_contract_name()      const {return m_contract_name;}
-            const xvmethod_t &  get_contract_function()  const {return *this;}
+            inline const std::string   get_caller()             const {return get_caller_uri();}
+            inline const std::string   get_contract_uri()       const {return get_method_uri();}
+            inline const xvmethod_t&   get_contract_function()  const {return *this;}
+            inline const std::string   get_org_tx_hash()        const {return m_org_tx_hash;}
+
+        protected:
+            //serialize header and object,return how many bytes is writed
+            virtual int32_t do_write(xstream_t & stream) const override;
+            virtual int32_t do_read(xstream_t & stream) override;
             
-            const int64_t   get_used_tgas()          const {return m_used_tgas;}
-            const int64_t   get_max_tgas()           const {return m_max_tgas;}
-            void            add_used_tgas(const int64_t _tags) { m_used_tgas += _tags;}
-            void            set_max_tgas(const int64_t new_max_tags)   { m_max_tgas = new_max_tags;}
-            
+            using           xvmethod_t::serialize_from; //just open for certain friend class to use
         private:
-            void            init(const int64_t init_max_tags = 0,const int64_t init_used_tgas = 0);
-            std::string     m_contract_addr;     //which contract. contract addr is same as account address
-            std::string     m_contract_name;     //contract name could be "default",or like "TEP0","TEP1"
-            uint64_t        m_taget_block_height;//ask executed at target block'height
-            
-        private://those are just work at runtime,NOT included into serialization
-            int64_t         m_max_tgas;          //max tgas allow used for this method
-            int64_t         m_used_tgas;         //return how many tgas(virtual cost) used for caller
+            void            parse_uri();
+            void            close();
+            std::string     m_org_tx_hash;       //which transaction generated this action
         };
 
     }//end of namespace of base

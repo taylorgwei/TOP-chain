@@ -38,7 +38,7 @@ namespace top
             
             virtual void*   query_interface(const int32_t _enum_xobject_type_) override;//caller need to cast (void*) to related ptr
             //general key-value query, e.g. query leaf of merkle tree by query_data("merkle-tree-leaf")
-            virtual const std::string query_value(const std::string & key) = 0;//virtual key-value for entity
+            virtual const std::string query_value(const std::string & key) {return std::string();}//virtual key-value for entity
             
             const int          get_entity_index() const {return m_entity_index;}
             
@@ -55,13 +55,9 @@ namespace top
             void               set_entity_index(const uint16_t index){m_entity_index = index;}
         private:
             xvexemodule_t *    m_exe_module;
-            uint16_t           m_entity_index;  //index at xvexecontext_t
+            uint16_t           m_entity_index;  //index at xvexemodule_t
         };
         
-        //qcert need seperately
-        //input do own logic  ->execution
-        //output do own logic ->builder
-    
         //transaction->action->input entity->[contract]->output entity->block
         //contract just do computing,who decide output ?
         //for unit: output entity = xvbstate:bin-log as general rule
@@ -70,17 +66,75 @@ namespace top
         //dedicated entity for input module
         class xvinentity_t : public xventity_t
         {
+            friend class xvblock_t;
+            friend class xvblockstore_t;
         public:
-            const std::vector<xvaction_t*> & get_actions() const {return m_actions;}
+            static  const std::string   name(){ return std::string("xvinentity");}
+            virtual std::string         get_obj_name() const override {return name();}
+            enum{enum_obj_type = enum_xobject_type_vinentity};
+        public:
+            xvinentity_t(const std::vector<xvaction_t*> & actions);
+            xvinentity_t(const std::vector<xvaction_t> & actions);
+            xvinentity_t(std::vector<xvaction_t> && actions);
+        protected:
+            xvinentity_t();
+            virtual ~xvinentity_t();
         private:
-            std::vector<xvaction_t*>   m_actions;
+            xvinentity_t(xvinentity_t &&);
+            xvinentity_t(const xvinentity_t &);
+            xvinentity_t & operator = (xvinentity_t &&);
+            xvinentity_t & operator = (const xvinentity_t &);
+            
+        public:
+            //caller need to cast (void*) to related ptr
+            virtual void*             query_interface(const int32_t _enum_xobject_type_) override;
+            //general key-value query, e.g. query leaf of merkle tree by query_data("merkle-tree-leaf")
+            virtual const std::string query_value(const std::string & key) override;//virtual key-value for entity
+            
+            const std::vector<xvaction_t> & get_actions() const {return m_actions;}
+            
+        protected:
+            //return how many bytes readout /writed in, return < 0(enum_xerror_code_type) when have error
+            virtual int32_t           do_write(xstream_t & stream) override; //allow subclass extend behavior
+            virtual int32_t           do_read(xstream_t & stream)  override; //allow subclass extend behavior
+        private:
+            std::vector<xvaction_t>   m_actions;
         };
     
         //dedicated entity for output module
         class xvoutentity_t : public xventity_t
         {
+            friend class xvblock_t;
+            friend class xvblockstore_t;
+        public:
+            static  const std::string   name(){ return std::string("xvoutentity");}
+            virtual std::string         get_obj_name() const override {return name();}
+            enum{enum_obj_type = enum_xobject_type_voutentity};
+        public:
+            xvoutentity_t(const std::string & state_bin_log);
+        protected:
+            xvoutentity_t();
+            virtual ~xvoutentity_t();
         private:
-            std::string     m_vbstate_binlog;
+            xvoutentity_t(xvoutentity_t &&);
+            xvoutentity_t(const xvoutentity_t &);
+            xvoutentity_t & operator = (xvoutentity_t &&);
+            xvoutentity_t & operator = (const xvoutentity_t &);
+            
+        public:
+            //caller need to cast (void*) to related ptr
+            virtual void*             query_interface(const int32_t _enum_xobject_type_) override;
+            //general key-value query, e.g. query leaf of merkle tree by query_data("merkle-tree-leaf")
+            virtual const std::string query_value(const std::string & key) override;//virtual key-value for entity
+            
+            const std::string &       get_state_binlog() const {return m_state_binlog;}
+            
+        protected:
+            //return how many bytes readout /writed in, return < 0(enum_xerror_code_type) when have error
+            virtual int32_t           do_write(xstream_t & stream) override; //allow subclass extend behavior
+            virtual int32_t           do_read(xstream_t & stream)  override; //allow subclass extend behavior
+        private:
+            std::string     m_state_binlog;
         };
     
         //xvbinentity_t present binary or unknow entity
@@ -88,7 +142,6 @@ namespace top
         {
             friend class xvblock_t;
             friend class xvblockstore_t;
-            friend class xventitymgr_t;
         public:
             static  const std::string   name(){ return std::string("xvbinentity");}
             virtual std::string         get_obj_name() const override {return name();}
@@ -127,7 +180,10 @@ namespace top
             friend class xvblock_t;
         protected:
             xvexemodule_t(enum_xdata_type type);
+            xvexemodule_t(std::vector<xventity_t*> && entitys,const std::string & raw_resource_data,enum_xdata_type type);
             xvexemodule_t(const std::vector<xventity_t*> & entitys,const std::string & raw_resource_data,enum_xdata_type type);
+            
+            xvexemodule_t(std::vector<xventity_t*> && entitys,xstrmap_t & resource, enum_xdata_type type);
             xvexemodule_t(const std::vector<xventity_t*> & entitys,xstrmap_t & resource, enum_xdata_type type);
             virtual ~xvexemodule_t();
         private:

@@ -781,7 +781,7 @@ namespace top
             {
                 if(latest_commit->get_height() > 0)
                 {
-                    base::xvbindex_t* result = load_index(latest_commit->get_last_fullblock_height(),0);
+                    base::xvbindex_t* result = load_index(latest_commit->get_last_full_block_height(),0);
                     if(result != NULL)//load_index has been return a added-reference ptr
                     {
                         m_meta->_highest_full_block_height = result->get_height();
@@ -2166,9 +2166,9 @@ namespace top
                 xassert(index_obj != NULL);
                 return false;
             }
-            if(index_obj->get_account_id() != get_xvid())//should not happen,but double check before save to db
+            if(index_obj->get_xvid() != get_xvid())//should not happen,but double check before save to db
             {
-                xerror("xblockacct_t::write_index_to_db,passin wrong index(%" PRIu64 ") that not belong to this account(%s)",index_obj->get_account_id(),get_account().c_str());
+                xerror("xblockacct_t::write_index_to_db,passin wrong index(%" PRIu64 ") that not belong to this account(%s)",index_obj->get_xvid(),get_account().c_str());
                 return false;
             }
 

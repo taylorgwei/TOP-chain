@@ -11,6 +11,7 @@ namespace top
 {
     namespace base
     {
+        //---------------------------------xventity_t---------------------------------//
         xventity_t::xventity_t(enum_xdata_type type)
         :xdataunit_t(type)
         {
@@ -27,7 +28,6 @@ namespace top
         bool xventity_t::close(bool force_async)
         {
             set_exe_module(NULL); //reset to null
-            
             return xdataunit_t::close(force_async);
         }
         
@@ -56,7 +56,6 @@ namespace top
         int32_t   xventity_t::do_write(xstream_t & stream) //allow subclass extend behavior
         {
             const int32_t begin_size = stream.size();
-            //stream.write_short_string(m_raw_data);
             stream << m_entity_index;
             return (stream.size() - begin_size);
         }
@@ -64,18 +63,156 @@ namespace top
         int32_t   xventity_t::do_read(xstream_t & stream)  //allow subclass extend behavior
         {
             const int32_t begin_size = stream.size();
-            //stream.read_short_string(m_raw_data);
             stream >> m_entity_index;
             return (begin_size - stream.size());
         }
+    
+        //---------------------------------xvinentity_t---------------------------------//
+        xvinentity_t::xvinentity_t(const std::vector<xvaction_t*> & actions)
+            :xventity_t(enum_xdata_type(enum_xobject_type_vinentity))
+        {
+            for(auto item : actions)
+            {
+                if(item != NULL)
+                {
+                    m_actions.emplace_back(*item);
+                }
+            }
+        }
         
+        xvinentity_t::xvinentity_t(const std::vector<xvaction_t> & actions)
+            :xventity_t(enum_xdata_type(enum_xobject_type_vinentity))
+        {
+            for(auto & item : actions)
+            {
+                m_actions.emplace_back(item);
+            }
+        }
+        
+        xvinentity_t::xvinentity_t(std::vector<xvaction_t> && actions)
+            :xventity_t(enum_xdata_type(enum_xobject_type_vinentity))
+        {
+            m_actions = std::move(actions);
+        }
+    
+        xvinentity_t::xvinentity_t()
+           :xventity_t(enum_xdata_type(enum_xobject_type_vinentity))
+        {
+        }
+    
+        xvinentity_t::~xvinentity_t()
+        {
+            m_actions.clear();
+        }
+        
+        //caller need to cast (void*) to related ptr
+        void*   xvinentity_t::query_interface(const int32_t _enum_xobject_type_)
+        {
+            if(_enum_xobject_type_ == enum_xobject_type_vinentity)
+                return this;
+            
+            return xventity_t::query_interface(_enum_xobject_type_);
+        }
+    
+        const std::string xvinentity_t::query_value(const std::string & key)//virtual key-value for entity
+        {
+            return std::string();
+        }
+        
+        int32_t     xvinentity_t::do_write(xstream_t & stream)//not allow subclass change behavior
+        {
+            const int32_t begin_size = stream.size();
+            xventity_t::do_write(stream);
+            
+            const uint16_t count = (uint16_t)m_actions.size();
+            stream << count;
+            for (auto & v : m_actions)
+            {
+                v.serialize_to(stream);
+            }
+            
+            return (stream.size() - begin_size);
+        }
+        
+        int32_t     xvinentity_t::do_read(xstream_t & stream) //not allow subclass change behavior
+        {
+            m_actions.clear();
+            const int32_t begin_size = stream.size();
+            xventity_t::do_read(stream);
+            
+            uint16_t count = 0;
+            stream >> count;
+            for (uint32_t i = 0; i < count; i++)
+            {
+                xvaction_t action;
+                const int res = action.serialize_from(stream);
+                if(res <= 0)
+                {
+                    xerror("xvinentity_t::do_read,fail to read action as error(%d),count(%d)",res,count);
+                    m_actions.clear(); //clean others as well
+                    return res;
+                }
+                m_actions.emplace_back(action);
+            }
+            return (begin_size - stream.size());
+        }
+    
+        //---------------------------------xvoutentity_t---------------------------------//
+        xvoutentity_t::xvoutentity_t(const std::string & state_bin_log)
+            :xventity_t(enum_xdata_type(enum_xobject_type_voutentity))
+        {
+            m_state_binlog = state_bin_log;
+        }
+    
+        xvoutentity_t::xvoutentity_t()
+            :xventity_t(enum_xdata_type(enum_xobject_type_voutentity))
+        {
+        }
+    
+        xvoutentity_t::~xvoutentity_t()
+        {
+            m_state_binlog.clear();
+        }
+    
+        //caller need to cast (void*) to related ptr
+        void*   xvoutentity_t::query_interface(const int32_t _enum_xobject_type_)
+        {
+            if(_enum_xobject_type_ == enum_xobject_type_voutentity)
+                return this;
+            
+            return xventity_t::query_interface(_enum_xobject_type_);
+        }
+        
+        const std::string xvoutentity_t::query_value(const std::string & key)//virtual key-value for entity
+        {
+            return std::string();
+        }
+        
+        int32_t     xvoutentity_t::do_write(xstream_t & stream)//not allow subclass change behavior
+        {
+            const int32_t begin_size = stream.size();
+            xventity_t::do_write(stream);
+            stream.write_compact_var(m_state_binlog);
+            return (stream.size() - begin_size);
+        }
+        
+        int32_t     xvoutentity_t::do_read(xstream_t & stream) //not allow subclass change behavior
+        {
+            m_state_binlog.clear();
+            const int32_t begin_size = stream.size();
+            xventity_t::do_read(stream);
+            stream.read_compact_var(m_state_binlog);
+            return (begin_size - stream.size());
+        }
+        
+        //---------------------------------xvbinentity_t---------------------------------//
         xvbinentity_t::xvbinentity_t()
-        :xventity_t(enum_xdata_type(enum_xobject_type_binventity))
+            :xventity_t(enum_xdata_type(enum_xobject_type_binventity))
         {
         }
         
         xvbinentity_t::xvbinentity_t(const std::string & raw_bin_data)
-        :xventity_t(enum_xdata_type(enum_xobject_type_binventity))
+            :xventity_t(enum_xdata_type(enum_xobject_type_binventity))
         {
             m_raw_data = raw_bin_data;
         }
@@ -83,7 +220,7 @@ namespace top
         xvbinentity_t::~xvbinentity_t()
         {
         }
-    
+        
         //caller need to cast (void*) to related ptr
         void*   xvbinentity_t::query_interface(const int32_t _enum_xobject_type_)
         {
@@ -98,7 +235,6 @@ namespace top
             const int32_t begin_size = stream.size();
             xventity_t::do_write(stream);
             
-            //stream.write_short_string(m_raw_data);
             stream << m_raw_data;
             return (stream.size() - begin_size);
         }
@@ -109,15 +245,25 @@ namespace top
             const int32_t begin_size = stream.size();
             xventity_t::do_read(stream);
             
-            //stream.read_short_string(m_raw_data);
             stream >> m_raw_data;
             return (begin_size - stream.size());
         }
-        
+
+        //---------------------------------xvexemodule_t---------------------------------//
         xvexemodule_t::xvexemodule_t(enum_xdata_type type)
             :xdataunit_t(type)
         {
             m_resources_obj = NULL;
+        }
+    
+        xvexemodule_t::xvexemodule_t(std::vector<xventity_t*> && entitys,const std::string & raw_resource_data,enum_xdata_type type)
+            :xdataunit_t(type)
+        {
+            m_resources_obj = NULL;
+            set_resources_data(raw_resource_data);
+            
+            m_entitys = entitys; //transfered owner of ptrs
+            entitys.clear();
         }
         
         xvexemodule_t::xvexemodule_t(const std::vector<xventity_t*> & entitys, const std::string & raw_resource_data,enum_xdata_type type)
@@ -134,6 +280,15 @@ namespace top
                 v->set_exe_module(this);
                 m_entitys.push_back(v);
             }
+        }
+    
+        xvexemodule_t::xvexemodule_t(std::vector<xventity_t*> && entitys,xstrmap_t & resource_obj, enum_xdata_type type)
+            :xdataunit_t(type)
+        {
+            resource_obj.add_ref();
+            m_resources_obj = &resource_obj;
+            
+            m_entitys = std::move(entitys);
         }
         
         xvexemodule_t::xvexemodule_t(const std::vector<xventity_t*> & entitys,xstrmap_t & resource_obj, enum_xdata_type type)
@@ -154,12 +309,14 @@ namespace top
         
         xvexemodule_t::~xvexemodule_t()
         {
-            for (auto & v : m_entitys){
+            for (auto & v : m_entitys)
+            {
                 v->close();
                 v->release_ref();
             }
             
-            if(m_resources_obj != NULL){
+            if(m_resources_obj != NULL)
+            {
                 m_resources_obj->close();
                 m_resources_obj->release_ref();
             }
@@ -243,10 +400,13 @@ namespace top
             const int32_t begin_size = stream.size();
             stream.write_tiny_string(m_resources_hash);
             
+            //XTODO, add flag to write m_resources_obj as well
+            
             const uint16_t count = (uint16_t)m_entitys.size();
             stream << count;
-            for (auto & v : m_entitys) {
-                v->serialize_to(stream);
+            for (auto & item : m_entitys)
+            {
+                item->serialize_to(stream);
             }
             return (stream.size() - begin_size);
         }
@@ -256,11 +416,19 @@ namespace top
             const int32_t begin_size = stream.size();
             stream.read_tiny_string(m_resources_hash);
             
+            //XTODO, add flag to read m_resources_obj as well
+            
             uint16_t count = 0;
             stream >> count;
-            for (uint32_t i = 0; i < count; i++) {
-                xventity_t* v = dynamic_cast<xventity_t*>(base::xdataunit_t::read_from(stream));
-                m_entitys.push_back(v);
+            for (uint32_t i = 0; i < count; i++)
+            {
+                xventity_t* entity = (xventity_t*)(base::xdataunit_t::read_from(stream));
+                if(NULL == entity)
+                {
+                    xerror("xvexemodule_t::do_read,fail to read entity from stream");
+                    return enum_xerror_code_bad_stream;
+                }
+                m_entitys.push_back(entity);
             }
             return (begin_size - stream.size());
         }

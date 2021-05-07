@@ -4,6 +4,7 @@
 
 #pragma once
  
+#include <mutex>
 #include "xbase/xvmethod.h"
 
 namespace top
@@ -11,6 +12,7 @@ namespace top
     namespace base
     {
         //xvcanvas_t is the execution context that recording and compile to bin-log
+        //xvcanvas_t has own mutex so it is multiple-thread safe
         class xvcanvas_t : public xrefcount_t
         {
         public:
@@ -22,14 +24,13 @@ namespace top
             };
             enum {enum_max_binlog_size = 536870912}; //1 << 29 = 536870912 = 512MB
         public://compile & decompile then encode/decode to certain format,encode_options = enum_compile_optimization | enum_compress_optimization
-            static const int  encode(std::deque<xvmethod_t> & input_records,const int compile_options,xstream_t & output_bin);
-            static const int  decode(xstream_t & input_bin,const uint32_t bin_size,std::deque<xvmethod_t> & output_records);
-            
-            static const int  encode(std::deque<xvmethod_t> & input_records,const int compile_options,std::string & output_bin);
-            static const int  decode(const std::string & input_bin,std::deque<xvmethod_t> & output_records);
+            static const int  decode_from(xstream_t & input_bin,const uint32_t bin_size,std::deque<xvmethod_t> & output_records);
+            static const int  decode_from(const std::string & input_bin,std::deque<xvmethod_t> & output_records);
             
         private://compile and decompile between records and bin-log
-            static const int  compile(std::deque<xvmethod_t> & input_records,const int compile_options,xstream_t & output_stream);
+            static const int  encode_to(const std::deque<xvmethod_t> & input_records,const int compile_options,std::string & output_bin);
+            static const int  encode_to(const std::deque<xvmethod_t> & input_records,const int compile_options,xstream_t & output_bin);
+            static const int  compile(const std::deque<xvmethod_t> & input_records,const int compile_options,xstream_t & output_stream);
             static const int  decompile(xstream_t & input_stream,std::deque<xvmethod_t> & output_records);
             
         public:
@@ -43,13 +44,15 @@ namespace top
             xvcanvas_t & operator = (const xvcanvas_t & obj);
             
         public:
-            bool            record(const xvmethod_t & op);//record instruction
-            const int       encode(const int compile_options,xstream_t & output_bin);//compile all recorded op with optimization option
-            const int       encode(const int compile_options,std::string & output_bin);//compile all recorded op with optimization option
+            bool       record(const xvmethod_t & op);//record instruction
+            
+            const int  encode(xstream_t & output_bin,const int compile_options = xvcanvas_t::enum_compile_optimization_all);
+            const int  encode(std::string & output_bin,const int compile_options = xvcanvas_t::enum_compile_optimization_all);
+ 
         protected:
             const std::deque<xvmethod_t> & get_op_records() const {return m_records;}
-            
         private:
+            std::recursive_mutex       m_lock;
             std::deque<xvmethod_t>     m_records;
         };
         

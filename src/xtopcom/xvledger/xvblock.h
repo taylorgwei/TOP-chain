@@ -8,7 +8,7 @@
 #include "xbase/xmem.h"
 #include "xbase/xobject_ptr.h"
 #include "xventity.h"
-#include "xvtransaction.h"
+#include "xvtransact.h"
 
 namespace top
 {
@@ -63,7 +63,7 @@ namespace top
 
 
         /////////////////////////2 byte for vblock types /////////////////////////
-        //[1][enum_xvblock_level][enum_xvblock_class][enum_xvblock_type][enum_xvblock_reserved] =  [1][3][3][7][2] = 16bits
+        //[1][enum_xvblock_level][enum_xvblock_class][enum_xvblock_type][enum_xvblock_character] =  [1][3][3][7][2] = 16bits
 
         //total 3bits = max 8 definition
         enum enum_xvblock_level
@@ -102,8 +102,10 @@ namespace top
         };
 
         //total 2bits = max 4 definition
-        enum enum_xvblock_reserved //reserved for future definition
+        enum enum_xvblock_character // for future definition
         {
+            enum_xvblock_character_block_state      = 0x0, //block-based state management(default one)
+            enum_xvblock_character_account_state    = 0x1, //account-based state management
         };
 
         constexpr uint64_t TOP_BEGIN_GMTIME = 1573189200;
@@ -118,6 +120,7 @@ namespace top
         class xvheader_t : public xdataunit_t
         {
             friend class xvblock_t;
+            friend class xvbmaker_t;
             friend class xvblockstore_t;
         public:
             static  const std::string   name(){ return std::string("xvheader");}
@@ -131,7 +134,7 @@ namespace top
             static int                  cal_block_version_minor(const uint32_t version){ return ((version& 0x0000FF00) >> 8);}
             static int                  cal_block_version_patch(const uint32_t version){ return ((version& 0x000000FF));}
 
-            //[0][enum_xvblock_level][enum_xvblock_class][enum_xvblock_type][enum_xvblock_reserved] =  [1][3][3][7][2] = 16bits
+            //[0][enum_xvblock_level][enum_xvblock_class][enum_xvblock_type][enum_xvblock_character] =  [1][3][3][7][2] = 16bits
             static enum_xvblock_level   cal_block_level(const int types){return (enum_xvblock_level)((types >> 12) & 0x07);}
             static enum_xvblock_class   cal_block_class(const int types){return (enum_xvblock_class)((types >> 9) & 0x07);}
             static enum_xvblock_type    cal_block_type(const int types){return (enum_xvblock_type) ((types >> 2) & 0x7F);}
@@ -147,12 +150,13 @@ namespace top
             virtual bool               is_valid()  const;
             virtual bool               is_equal(const xvheader_t & other) const;
             virtual void*              query_interface(const int32_t _enum_xobject_type_) override final;//caller need to cast (void*) to related ptr
+            virtual xauto_ptr<xvheader_t> clone() const;
         public:
-            //[0][enum_xvblock_level][enum_xvblock_class][enum_xvblock_type][enum_xvblock_reserved] =  [1][3][3][7][2] = 16bits
+            //[0][enum_xvblock_level][enum_xvblock_class][enum_xvblock_type][enum_xvblock_state_mode] =  [1][3][3][7][2] = 16bits
             inline enum_xvblock_level          get_block_level()  const {return (enum_xvblock_level)((m_types >> 12) & 0x07);}
             inline enum_xvblock_class          get_block_class()  const {return (enum_xvblock_class)((m_types >> 9) & 0x07);}
             inline enum_xvblock_type           get_block_type()   const {return (enum_xvblock_type) ((m_types >> 2) & 0x7F);}
-            //inline enum_xvblock_reserved     get_block_reserved() const {return (enum_xvblock_reserved)(m_types & 0x03);}
+            inline enum_xvblock_character      get_block_character() const {return (enum_xvblock_character)(m_types & 0x03);}
             inline const uint16_t              get_block_raw_types() const {return m_types;}
 
             //common information for this block
@@ -180,7 +184,7 @@ namespace top
 
         protected: //the reason provide beblow setting, just given subclass the flex for construction function
 
-            //[1][enum_xvblock_level][enum_xvblock_class][enum_xvblock_type][enum_xvblock_reserved] =  [1][3][3][7][2] = 16bits
+            //[1][enum_xvblock_level][enum_xvblock_class][enum_xvblock_type][enum_xvblock_character] =  [1][3][3][7][2] = 16bits
             inline void                 set_block_level(enum_xvblock_level _level)  {m_types = ( (m_types & 0x8FFF) | (_level << 12));}
             inline void                 set_block_class(enum_xvblock_class _class)  {m_types = ( (m_types & 0xF1FF) | (_class << 9 ));}
             inline void                 set_block_type(enum_xvblock_type  _type)    {m_types = ( (m_types & 0xFE03) | (_type  << 2));}
@@ -284,6 +288,7 @@ namespace top
         class xvqcert_t : public xdataunit_t
         {
             friend class xvblock_t;
+            friend class xvbmaker_t;
             friend class xvblockstore_t;
         public:
             static  const std::string   name(){ return std::string("xvqcert");}
@@ -314,7 +319,7 @@ namespace top
             virtual void*              query_interface(const int32_t _enum_xobject_type_) override;//caller need to cast (void*) to related ptr
 
             virtual std::string        dump() const override;  //just for debug purpose
-
+            virtual xauto_ptr<xvqcert_t> clone() const;
         public:
             inline  uint64_t           get_clock()     const {return m_clock;} //start/create time of this cert
             inline  uint64_t           get_expired()   const {return (m_expired == (uint32_t)-1) ? ((uint64_t)-1) : (m_clock + m_expired);}//return absolute clock'height
@@ -427,7 +432,7 @@ namespace top
             std::string         m_header_hash;      //hash of xvheader_t ' bindata
             std::string         m_input_root_hash;  //merkle tree' root of commands(or txs),it might be nil
             std::string         m_output_root_hash; //merkle tree' root of the executed result of cmds/txs,it might be nil
-            std::string         m_justify_cert_hash;//point the block hash of locked block for unit-block,but point to m_output_root_hash of locked block for other cases(refer enum_xvblock_level)
+            std::string         m_justify_cert_hash;//point the block hash of locked block for unit-block,or point to m_output_root_hash of locked block for other cases depend on enum_xvblock_level
 
             //combine the above data together as "hash to sign" by verify_signature and audit_signature
             std::string         m_verify_signature; //Quorum-Signature of BLS/Schnorr,or PoW Proof as signature
@@ -450,6 +455,8 @@ namespace top
 
         public:
             xvinput_t(const std::vector<xventity_t*> & entitys,const std::string & raw_resource_data,enum_xdata_type type = (enum_xdata_type)enum_xobject_type_vinput);
+            
+            xvinput_t(std::vector<xventity_t*> && entitys,xstrmap_t & resource_obj,enum_xdata_type type = (enum_xdata_type)enum_xobject_type_vinput);
             xvinput_t(const std::vector<xventity_t*> & entitys,xstrmap_t & resource_obj,enum_xdata_type type = (enum_xdata_type)enum_xobject_type_vinput);
         protected:
             xvinput_t(enum_xdata_type type = (enum_xdata_type)enum_xobject_type_vinput);
@@ -459,13 +466,8 @@ namespace top
             xvinput_t & operator = (const xvinput_t & other);
 
         public:
-            virtual void*   query_interface(const int32_t _enum_xobject_type_) override//caller need to cast (void*) to related ptr
-            {
-                if(_enum_xobject_type_ == enum_xobject_type_vinput)
-                    return this;
-
-                return xvexemodule_t::query_interface(_enum_xobject_type_);
-            }
+            //caller need to cast (void*) to related ptr
+            virtual void*   query_interface(const int32_t _enum_xobject_type_) override;
 
         public:
             //proposal usally include raw transaction & receipts. note:following methods are not thread-safe
@@ -492,6 +494,7 @@ namespace top
             enum{enum_obj_type = enum_xobject_type_voutput};//allow xbase create xvoutput_t object from xdataobj_t::read_from()
 
         public:
+            xvoutput_t(std::vector<xventity_t*> && entitys,enum_xdata_type type = (enum_xdata_type)enum_xobject_type_voutput);
             xvoutput_t(const std::vector<xventity_t*> & entitys,const std::string & raw_resource_data, enum_xdata_type type = (enum_xdata_type)enum_xobject_type_voutput);
             xvoutput_t(const std::vector<xventity_t*> & entitys,xstrmap_t & resource,enum_xdata_type type = (enum_xdata_type)enum_xobject_type_voutput);//xvqcert_t used for genreate hash for resource
         protected:
@@ -502,13 +505,8 @@ namespace top
             xvoutput_t & operator = (const xvoutput_t & other);
 
         public:
-            virtual void*   query_interface(const int32_t _enum_xobject_type_) override//caller need to cast (void*) to related ptr
-            {
-                if(_enum_xobject_type_ == enum_xobject_type_voutput)
-                    return this;
-
-                return xvexemodule_t::query_interface(_enum_xobject_type_);
-            }
+            //caller need to cast (void*) to related ptr
+            virtual void*   query_interface(const int32_t _enum_xobject_type_) override;
 
             //root of input which usally present a root of merkle tree for input
             virtual const std::string   get_root_hash() {return m_root_hash;}
@@ -553,10 +551,10 @@ namespace top
             enum_xvblock_flags_mask             = 0xFF00, //mask to get all block flags
         };
 
-
         //note: xvblock must have associated xvheader_t and xvqcert_t objects
         class xvblock_t : public xdataobj_t
         {
+            friend class xvbmaker_t;
             friend class xvblockstore_t;
         public:
             static  const std::string  name(){return "xvblock";}
@@ -613,8 +611,15 @@ namespace top
             inline  const std::string&  get_account()     const {return m_vheader_ptr->get_account();}
             inline  enum_xvblock_class  get_block_class() const {return m_vheader_ptr->get_block_class();}
             inline  enum_xvblock_type   get_block_type()  const {return m_vheader_ptr->get_block_type();}
+            inline  enum_xvblock_level  get_block_level() const {return m_vheader_ptr->get_block_level();}
+            
+            //note:block'hash actually = cert'hash
+            inline  const  std::string& get_cert_hash()   const {return m_cert_hash;}
+            inline  const  std::string& get_block_hash()  const {return get_cert_hash();}
+            inline  const  std::string& get_last_block_hash()   const {return m_vheader_ptr->get_last_block_hash();}
             inline  uint64_t            get_last_full_block_height() const {return m_vheader_ptr->get_last_full_block_height();}
-
+            inline  const  std::string& get_last_full_block_hash() const{return m_vheader_ptr->get_last_full_block_hash();}
+            
             inline uint32_t             get_block_version()       const  { return m_vheader_ptr->get_block_version();}
             inline int                  get_block_version_major() const  { return m_vheader_ptr->get_block_version_major();}
             inline int                  get_block_version_minor() const  { return m_vheader_ptr->get_block_version_minor();}
@@ -625,12 +630,7 @@ namespace top
             inline  const  std::string& get_output_hash() const {return m_vheader_ptr->get_output_hash();}
             inline  const  std::string& get_input_root_hash()   const {return m_vqcert_ptr->get_input_root_hash();}
             inline  const  std::string& get_output_root_hash()  const {return m_vqcert_ptr->get_output_root_hash();}
-            inline  const  std::string& get_last_block_hash()   const {return m_vheader_ptr->get_last_block_hash();}
             inline  const  std::string& get_justify_cert_hash() const {return m_vqcert_ptr->get_justify_cert_hash();}
-            inline  const  std::string& get_last_full_block_hash() const{return m_vheader_ptr->get_last_full_block_hash();}
-
-            inline  const  std::string& get_cert_hash()   const {return m_cert_hash;}//note:block'hash actually = cert'hash
-            inline  const  std::string& get_block_hash()  const {return get_cert_hash();}
 
             inline  xvblock_t*          get_prev_block()  const {return m_prev_block;}   //raw ptr of parent block of this
             inline  xvblock_t*          get_next_block()  const {return m_next_block;}   //raw ptr of child/next block of this
@@ -654,6 +654,9 @@ namespace top
             virtual std::string         get_offdata_hash() const {return std::string();}//as default has none offdata
 
             virtual bool                close(bool force_async = true) override; //close and release this node only
+            //subclass should override this to genereate new object
+            virtual xauto_ptr<xvblock_t>clone() const; //clone a same block object
+            
             virtual std::string         dump() const override;  //just for debug purpose
             const   std::string&        dump2();  //just for debug and trace purpose with better performance
         public:

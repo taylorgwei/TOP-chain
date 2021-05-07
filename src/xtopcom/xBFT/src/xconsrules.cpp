@@ -549,7 +549,7 @@ namespace top
             if(latest_proposal != NULL) //never vote behind proposal block
             {
                 if(  (_vote_block->get_viewid() <= latest_proposal->get_viewid())
-                   ||(_vote_block->get_height() <= latest_proposal->get_height()) )
+                   ||(_vote_block->get_height() <  latest_proposal->get_height()) )
                 {
                     xwarn("xBFTRules::safe_check_for_vote_block,warn-conflict existing proposal, proposal=%s <= latest_proposal=%s at node=0x%llx",_vote_block->dump().c_str(), latest_proposal->dump().c_str(),get_xip2_addr().low_addr);
                     return false;

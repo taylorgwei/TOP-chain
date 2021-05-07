@@ -15,7 +15,7 @@ namespace top
         {
             friend class xvexegroup_t;
         protected:
-            typedef std::function< const xvalue_t (const xvmethod_t & op) > xvstdfunc_t;
+            typedef std::function< const xvalue_t (const xvmethod_t & op,xvcanvas_t * canvas) > xvstdfunc_t;
         public:
             static  const std::string   name(){ return std::string("xvexeunit");}
             virtual std::string         get_obj_name() const override {return name();}
@@ -36,6 +36,7 @@ namespace top
             virtual void*               query_interface(const int32_t _enum_xobject_type_) override;//caller cast (void*) to related ptr
             virtual bool                close(bool force_async = false) override;
             virtual xvexeunit_t*        clone() = 0;
+
         public:
             //call instruction(operator) with related arguments
             virtual const xvalue_t      execute(const xvmethod_t & op,xvcanvas_t * canvas);//might throw exception for error
@@ -46,8 +47,7 @@ namespace top
             inline  const std::string&  get_unit_name()     const {return m_unit_name;}
             inline  const std::string&  get_execute_uri()   const {return m_execute_uri;}
             inline  xvexeunit_t*        get_parent_unit()   const {return m_parent_unit;}
-            virtual xvcanvas_t*         get_canvas()        const {return (m_parent_unit != NULL) ? m_parent_unit->get_canvas() : NULL; }
-            
+             
         protected:
             bool                 register_method(const uint8_t method_type,const uint8_t method_id,const xvstdfunc_t & api_function);
             bool                 register_method(const uint8_t method_type,const std::string & method_name,const xvstdfunc_t & api_function);
@@ -81,6 +81,8 @@ namespace top
             virtual const xvalue_t  execute(const xvmethod_t & op,xvcanvas_t * canvas) override;//might throw exception for error
             virtual bool            close(bool force_async = false) override;
             //virtual xvexeunit_t*    clone() override;
+            std::recursive_mutex&   get_mutex() {return m_lock;}
+            
         protected:
             bool                clone_units_from(const xvexegroup_t & source);
             bool                add_child_unit(xvexeunit_t * child);
@@ -93,18 +95,19 @@ namespace top
             virtual int32_t     do_write(xstream_t & stream) override; //allow subclass extend behavior
             virtual int32_t     do_read(xstream_t & stream)  override; //allow subclass extend behavior
         private:
+            std::recursive_mutex               m_lock;
             std::map<std::string,xvexeunit_t*> m_child_units;
         };
     
         //convenient macro to register vfunction/api by method id
         #define BEGIN_DECLARE_XVIFUNC_ID_API(_category) template<typename _T, enum_xvinstruct_class category=_category > void register_xvfunct_id_api_internal##_category(_T * pThis){
-        #define IMPL_XVIFUNCE_ID_API(methodid,entry) register_method((const uint8_t)category,(const uint8_t)methodid,std::bind(&_T::entry,pThis,std::placeholders::_1));
+        #define IMPL_XVIFUNCE_ID_API(methodid,entry) register_method((const uint8_t)category,(const uint8_t)methodid,std::bind(&_T::entry,pThis,std::placeholders::_1,std::placeholders::_2));
         #define END_DECLARE_XVIFUNC_ID_API(_category) }
         #define REGISTER_XVIFUNC_ID_API(_category) register_xvfunct_id_api_internal##_category(this)
             
             //convenient macro to register vfunction/api by method name
         #define BEGIN_DECLARE_XVIFUNC_NAME_API(_category) template<typename _T,enum_xvinstruct_class category=_category> void register_xvifunction_name_api_internal##_category(_T * pThis){
-        #define IMPL_XVIFUNC_NAME_API(funcname,entry) register_method((const uint8_t)category,funcname, std::bind(&_T::entry,pThis,std::placeholders::_1));
+        #define IMPL_XVIFUNC_NAME_API(funcname,entry) register_method((const uint8_t)category,funcname, std::bind(&_T::entry,pThis,std::placeholders::_1,std::placeholders::_2));
         #define END_DECLARE_XVIFUNC_NAME_API(_category) }
         #define REGISTER_XVIFUNC_NAME_API(_category) register_xvifunction_name_api_internal##_category(this)
 

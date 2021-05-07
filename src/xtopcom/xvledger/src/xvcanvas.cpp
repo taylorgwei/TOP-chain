@@ -12,7 +12,7 @@ namespace top
 {
     namespace base
     {
-        const int  xvcanvas_t::compile(std::deque<xvmethod_t> & input_records,const int compile_options,xstream_t & output_stream)
+        const int  xvcanvas_t::compile(const std::deque<xvmethod_t> & input_records,const int compile_options,xstream_t & output_stream)
         {
             output_stream << (int32_t)input_records.size();
             if(enum_compile_optimization_none == (compile_options & enum_compile_optimization_mask) ) //dont ask any optimization
@@ -153,40 +153,87 @@ namespace top
         }
         
         //raw_instruction code -> optimization -> original_length -> compressed
-        const int  xvcanvas_t::encode(std::deque<xvmethod_t> & input_records,const int encode_options,xstream_t & output_bin)
+        const int  xvcanvas_t::encode_to(const std::deque<xvmethod_t> & input_records,const int encode_options,xstream_t & output_bin)
         {
-            base::xautostream_t<1024> _raw_stream(xcontext_t::instance());
-            compile(input_records,encode_options,_raw_stream);
-            return xstream_t::compress_to_stream(_raw_stream, _raw_stream.size(),output_bin);
+            try{
+                
+                base::xautostream_t<1024> _raw_stream(xcontext_t::instance());
+                compile(input_records,encode_options,_raw_stream);
+                return xstream_t::compress_to_stream(_raw_stream, _raw_stream.size(),output_bin);
+                
+            } catch (int error_code){
+                xerror("xvcanvas_t::encode_to,throw exception with error:%d",error_code);
+                return enum_xerror_code_errno;
+            }
+            xerror("xvcanvas_t::encode_to,throw unknow exception");
+            return enum_xerror_code_fail;
         }
         
-        const int  xvcanvas_t::encode(std::deque<xvmethod_t> & input_records,const int encode_options,std::string & output_bin)
+        const int  xvcanvas_t::encode_to(const std::deque<xvmethod_t> & input_records,const int encode_options,std::string & output_bin)
         {
-            base::xautostream_t<1024> _raw_stream(xcontext_t::instance());
-            compile(input_records,encode_options,_raw_stream);
-            return xstream_t::compress_to_string(_raw_stream,_raw_stream.size(),output_bin);
+            try{
+                
+                base::xautostream_t<1024> _raw_stream(xcontext_t::instance());
+                compile(input_records,encode_options,_raw_stream);
+                return xstream_t::compress_to_string(_raw_stream,_raw_stream.size(),output_bin);
+                
+            } catch (int error_code){
+                xerror("xvcanvas_t::encode_to,throw exception with error:%d",error_code);
+                return enum_xerror_code_errno;
+            }
+            xerror("xvcanvas_t::encode_to,throw unknow exception");
+            return enum_xerror_code_fail;
         }
         
-        const int  xvcanvas_t::decode(xstream_t & input_bin,const uint32_t bin_size,std::deque<xvmethod_t> & output_records)
+        const int  xvcanvas_t::decode_from(xstream_t & input_bin,const uint32_t bin_size,std::deque<xvmethod_t> & output_records)
         {
-            xautostream_t<1024> uncompressed_stream(xcontext_t::instance()); //1K is big enough for most packet
-            const int decompress_result = xstream_t::decompress_from_stream(input_bin,bin_size,uncompressed_stream);
-            if(decompress_result > 0)
-                return decompile(uncompressed_stream,output_records);
+            if( (input_bin.size() == 0) || (bin_size == 0) || (input_bin.size() < bin_size) )
+            {
+                xerror("xvcanvas_t::decode_from,invalid stream of size(%d) vs bin_log_size(%u)",(int)input_bin.size(),bin_size);
+                return enum_xerror_code_no_data;
+            }
             
-            xerror("xvcanvas_t::decode,decompress_from_stream failed as err(%d)",decompress_result);
-            return decompress_result;
+            try{
+
+                xautostream_t<1024> uncompressed_stream(xcontext_t::instance()); //1K is big enough for most packet
+                const int decompress_result = xstream_t::decompress_from_stream(input_bin,bin_size,uncompressed_stream);
+                if(decompress_result > 0)
+                    return decompile(uncompressed_stream,output_records);
+                
+                xerror("xvcanvas_t::decode_from,decompress_from_stream failed as err(%d)",decompress_result);
+                return decompress_result;
+                
+            } catch (int error_code){
+                xerror("xvcanvas_t::decode_from,throw exception with error:%d",error_code);
+                return enum_xerror_code_errno;
+            }
+            xerror("xvcanvas_t::decode_from,throw unknow exception");
+            return enum_xerror_code_fail;
         }
         
-        const int  xvcanvas_t::decode(const std::string & input_bin,std::deque<xvmethod_t> & output_records)
+        const int  xvcanvas_t::decode_from(const std::string & input_bin,std::deque<xvmethod_t> & output_records)
         {
-            xautostream_t<1024> uncompressed_stream(xcontext_t::instance()); //1K is big enough for most packet
-            const int decompress_result = xstream_t::decompress_from_string(input_bin,uncompressed_stream);
-            if(decompress_result > 0)
-                return decompile(uncompressed_stream,output_records);
+            if(input_bin.empty())
+            {
+                xerror("xvcanvas_t::decode_from,empty input_bin");
+                return enum_xerror_code_no_data;
+            }
             
-            xerror("xvcanvas_t::decode,decompress_from_string failed as err(%d)",decompress_result);
-            return decompress_result;
+            try{
+                xautostream_t<1024> uncompressed_stream(xcontext_t::instance()); //1K is big enough for most packet
+                const int decompress_result = xstream_t::decompress_from_string(input_bin,uncompressed_stream);
+                if(decompress_result > 0)
+                    return decompile(uncompressed_stream,output_records);
+                
+                xerror("xvcanvas_t::decode_from,decompress_from_string failed as err(%d)",decompress_result);
+                return decompress_result;
+                
+            } catch (int error_code){
+                xerror("xvcanvas_t::decode_from,throw exception with error:%d",error_code);
+                return enum_xerror_code_errno;
+            }
+            xerror("xvcanvas_t::decode_from,throw unknow exception");
+            return enum_xerror_code_fail;
         }
         
         xvcanvas_t::xvcanvas_t()
@@ -195,38 +242,34 @@ namespace top
         
         xvcanvas_t::xvcanvas_t(const std::string & bin_log)
         {
-            try{
-                if(bin_log.empty() == false)
-                {
-                    xstream_t _stream(xcontext_t::instance(),(uint8_t*)bin_log.data(),(uint32_t)bin_log.size());
-                    xvcanvas_t::decode(_stream,_stream.size(),m_records);
-                }
-            }catch(...){
-                xassert(0);
-                m_records.clear();
-            }
+            xvcanvas_t::decode_from(bin_log,m_records);
         }
         
         xvcanvas_t::~xvcanvas_t()
         {
+            m_lock.lock();
             m_records.clear();
+            m_lock.unlock();
         }
         
         bool   xvcanvas_t::record(const xvmethod_t & op) //record instruction
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
             m_records.emplace_back(op);
             return true;
         }
-        
-        const int  xvcanvas_t::encode(const int encode_options,xstream_t & output_bin) //compile all recorded op with optimization option
+    
+        const int  xvcanvas_t::encode(xstream_t & output_bin,const int compile_options)
         {
-            return xvcanvas_t::encode(m_records,encode_options,output_bin);
-        }
-        
-        const int  xvcanvas_t::encode(const int encode_options,std::string & output_bin)//compile all recorded op with optimization option
-        {
-            return xvcanvas_t::encode(m_records,encode_options,output_bin);
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            return encode_to(m_records,compile_options,output_bin);
         }
     
+        const int  xvcanvas_t::encode(std::string & output_bin,const int compile_options)
+        {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            return encode_to(m_records,compile_options,output_bin);
+        }
+        
     };//end of namespace of base
 };//end of namespace of top

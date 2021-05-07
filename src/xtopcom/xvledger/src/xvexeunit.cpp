@@ -138,7 +138,7 @@ namespace top
                 auto it = m_name_methods.find(method_key);
                 if(it != m_name_methods.end())
                 {
-                    const xvalue_t res(it->second(op));
+                    const xvalue_t res(it->second(op,canvas));
                     if( (res.get_type() != xvalue_t::enum_xvalue_type_error) || (res.get_error() == enum_xcode_successful) )
                     {
                         if(canvas != nullptr)
@@ -157,7 +157,7 @@ namespace top
                 auto it = m_id_methods.find(method_key);
                 if(it != m_id_methods.end())
                 {
-                    const xvalue_t res(it->second(op));
+                    const xvalue_t res(it->second(op,canvas));
                     if( (res.get_type() != xvalue_t::enum_xvalue_type_error) || (res.get_error() == enum_xcode_successful) )
                     {
                         if(canvas != nullptr)
@@ -191,16 +191,20 @@ namespace top
 
         xvexegroup_t::~xvexegroup_t()
         {
+            m_lock.lock();
             for(auto & u : m_child_units)
             {
                 u.second->set_parent_unit(nullptr);//reset to parent ptr anyway
                 u.second->release_ref();
             }
             m_child_units.clear();
+            m_lock.unlock();
         }
         
         bool  xvexegroup_t::clone_units_from(const xvexegroup_t & source)
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            
             for(auto & u : source.m_child_units)
             {
                 xvexeunit_t * clone_unit = u.second->clone();
@@ -216,6 +220,7 @@ namespace top
     
         bool  xvexegroup_t::close(bool force_async)
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
             if(is_close() == false)
             {
                 for(auto & u : m_child_units)
@@ -228,6 +233,8 @@ namespace top
     
         void   xvexegroup_t::set_parent_unit(xvexeunit_t * parent_ptr)
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            
             xvexeunit_t::set_parent_unit(parent_ptr);//set self first
             
             for(auto & u : m_child_units)
@@ -236,6 +243,8 @@ namespace top
     
         bool   xvexegroup_t::add_child_unit(xvexeunit_t * child)
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            
             xassert(child != nullptr);
             if(child == nullptr)
                 return false;
@@ -264,6 +273,8 @@ namespace top
     
         bool   xvexegroup_t::remove_child_unit(const std::string & unit_name)
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            
             auto it = m_child_units.find(unit_name);
             if(it != m_child_units.end())
             {
@@ -277,6 +288,8 @@ namespace top
     
         xvexeunit_t *   xvexegroup_t::find_child_unit(const std::string & unit_name)
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            
             auto it = m_child_units.find(unit_name);
             if(it != m_child_units.end())
             {
@@ -288,6 +301,8 @@ namespace top
         //call instruction(operator) with related arguments
         const xvalue_t  xvexegroup_t::execute(const xvmethod_t & op,xvcanvas_t * canvas)  //might throw exception for error
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            
             const std::string & target_execution_uri = op.get_method_uri();
             const std::string & this_execution_uri = get_execute_uri();
             if(target_execution_uri == this_execution_uri)
@@ -330,6 +345,8 @@ namespace top
         //return how many bytes readout /writed in, return < 0(enum_xerror_code_type) when have error
         int32_t    xvexegroup_t::do_write(xstream_t & stream)  //allow subclass extend behavior
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            
             const int32_t begin_size = stream.size();
  
             const uint16_t count = (uint16_t)m_child_units.size();
@@ -344,6 +361,8 @@ namespace top
         
         int32_t   xvexegroup_t::do_read(xstream_t & stream) //allow subclass extend behavior
         {
+            std::lock_guard<std::recursive_mutex> locker(m_lock);
+            
             const int32_t begin_size = stream.size();
             
             uint16_t count = 0;

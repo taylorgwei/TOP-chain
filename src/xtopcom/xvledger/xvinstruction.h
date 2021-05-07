@@ -13,8 +13,8 @@ namespace top
         enum enum_xvinstruct_class : int8_t //3bit only
         {
             enum_xvinstruct_class_nil               = 0x00,  //nil op code,do nothing
-            enum_xvinstruct_class_core_function     = 0x01,  //language/instruction used
-            //enum_xvinstruct_class_system_function   = 0x02,  //system functions like Hash,Zip,Signature...
+            enum_xvinstruct_class_core_function     = 0x01,  //language/instruction,and hash/signature etc functions
+            enum_xvinstruct_class_system_function   = 0x02,  //system functions,like load contract/state/block/module,build block etc
             enum_xvinstruct_class_state_function    = 0x03,  //call to target with method id/
             enum_xvinstruct_class_contract_function = 0x04,  //VM contract ' function,allow defined max as 111 method id
             enum_xvinstruct_class_rpc_function      = 0x05,  //allow defined max as 111 method id
@@ -28,13 +28,14 @@ namespace top
         enum enum_xvinstruct_core_method_id : int8_t
         {
             enum_xvinstruct_core_method_invalid            = 0x00,  //0 always be invalid
-            
+            //core instruction
             enum_xvinstruct_core_method_abort              = 0x01,  //stop & abort current execution,quit it
             enum_xvinstruct_core_method_return             = 0x02,  //restore stack to begin of function execution
             enum_xvinstruct_core_method_loop               = 0x03,  //limited loop like while/for
             enum_xvinstruct_core_method_break              = 0x04,  //break loop
             enum_xvinstruct_core_method_if                 = 0x05,  //all condition control
             
+            //operate value
             enum_xvinstruct_core_method_clone_value        = 0x10,  //deep copy/clone value
             enum_xvinstruct_core_method_reset_value        = 0x11,  //set and replace by a full-value completely
             enum_xvinstruct_core_method_clear_value        = 0x12,  //clear value to "logic zero"
@@ -42,6 +43,7 @@ namespace top
             enum_xvinstruct_core_method_push_value         = 0x14,  //push value to stack
             enum_xvinstruct_core_method_pop_value          = 0x15,  //pop top value from stack
   
+            //math computing
             enum_xvinstruct_core_method_add_value          = 0x20,  //logic add
             enum_xvinstruct_core_method_sub_value          = 0x21,  //logic sub
             enum_xvinstruct_core_method_mul_value          = 0x22,  //logic multiplcation
