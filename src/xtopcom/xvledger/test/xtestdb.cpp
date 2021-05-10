@@ -117,7 +117,7 @@ namespace top
             }
             return true;
         }
-        
+    
         bool             xstoredb_t::execute_block(base::xvblock_t* block)
         {
             return true;
@@ -153,7 +153,7 @@ namespace top
         void   xveventbus_impl::push_event(const mbus::xevent_ptr_t& e)
         {
         }
-        
+ 
         mbus::xevent_ptr_t  xveventbus_impl::create_event_for_store_index_to_db(base::xvbindex_t * target_block)
         {
             //return mbus::xevent_ptr_t(new mbus::xevent_t(0));
@@ -164,7 +164,7 @@ namespace top
         {
             return nullptr;
         }
-        
+    
         mbus::xevent_ptr_t  xveventbus_impl::create_event_for_store_block_to_db(base::xvblock_t * target_block)
         {
             //return mbus::xevent_ptr_t(new mbus::xevent_t(0));

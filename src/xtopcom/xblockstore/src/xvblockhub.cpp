@@ -9,6 +9,7 @@
 #include "xvblockhub.h"
 #include "xvgenesis.h"
 #include "xvledger/xvdbkey.h"
+#include "xvledger/xvboffdata.h"
 
 #ifdef ENABLE_METRICS
     #include "xmetrics/xmetrics.h"
@@ -781,7 +782,7 @@ namespace top
             {
                 if(latest_commit->get_height() > 0)
                 {
-                    base::xvbindex_t* result = load_index(latest_commit->get_last_fullblock_height(),0);
+                    base::xvbindex_t* result = load_index(latest_commit->get_last_full_block_height(),0);
                     if(result != NULL)//load_index has been return a added-reference ptr
                     {
                         m_meta->_highest_full_block_height = result->get_height();
@@ -2252,7 +2253,7 @@ namespace top
                 {
                     if(index_ptr->get_height() != 0)
                     {
-                        mbus::xevent_ptr_t event = mbus->create_event_for_store_index_to_db(get_account(), index_ptr);
+                        mbus::xevent_ptr_t event = mbus->create_event_for_store_index_to_db(index_ptr);
                         if (event != nullptr) {
                             mbus->push_event(event);
                         }
