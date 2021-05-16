@@ -14,7 +14,7 @@
 #include "xtxexecutor/xtransaction_executor.h"
 #include "xvledger/xvledger.h"
 #include "xvledger/xvstatestore.h"
-#include "xcontract_runtime/xaccount_vm.h"
+// #include "xcontract_runtime/xaccount_vm.h"
 
 NS_BEG2(top, blockmaker)
 
@@ -37,7 +37,6 @@ xblock_ptr_t        xlightunit_builder_t::build_block(const xblock_ptr_t & prev_
     std::shared_ptr<xlightunit_builder_para_t> lightunit_build_para = std::dynamic_pointer_cast<xlightunit_builder_para_t>(build_para);
     xassert(lightunit_build_para != nullptr);
 
-    uint32_t unconfirm_num = prev_state->get_unconfirm_sendtx_num();
     std::shared_ptr<store::xaccount_context_t> _account_context = std::make_shared<store::xaccount_context_t>(prev_state.get(), build_para->get_store());
     _account_context->set_context_para(cs_para.get_clock(), cs_para.get_random_seed(), cs_para.get_timestamp(), cs_para.get_total_lock_tgas_token());
     xassert(!cs_para.get_table_account().empty());
@@ -48,19 +47,14 @@ xblock_ptr_t        xlightunit_builder_t::build_block(const xblock_ptr_t & prev_
     const std::vector<xcons_transaction_ptr_t> & input_txs = lightunit_build_para->get_origin_txs();
     txexecutor::xbatch_txs_result_t exec_result;
     int exec_ret = txexecutor::xtransaction_executor::exec_batch_txs(_account_context.get(), input_txs, exec_result);
+    xinfo("xlightunit_builder_t::build_block %s,account=%s,exec_ret=%d,succtxs_count=%zu,failtxs_count=%zu,createtxs_count=%zu,unconfirm_count=%d,binlog_size=%zu",
+        cs_para.dump().c_str(), prev_block->get_account().c_str(), exec_ret, exec_result.m_exec_succ_txs.size(), exec_result.m_exec_fail_txs.size(),
+        exec_result.succ_txs_result.m_contract_txs.size(), _account_context->get_blockchain()->get_unconfirm_sendtx_num(), exec_result.succ_txs_result.m_property_binlog.size());
+    // some send txs may execute fail but some recv/confirm txs may execute successfully
+    if (!exec_result.m_exec_fail_txs.empty()) {
+        lightunit_build_para->set_fail_txs(exec_result.m_exec_fail_txs);
+    }
     if (exec_ret != xsuccess) {
-        xassert(exec_result.m_exec_fail_tx_ret != 0);
-        xassert(exec_result.m_exec_fail_tx != nullptr);
-        const auto & failtx = exec_result.m_exec_fail_tx;
-        xassert(failtx->is_self_tx() || failtx->is_send_tx());
-        xwarn("xlightunit_builder_t::build_block fail-tx execute. %s,account:%s,height=%" PRIu64 ",tx=%s",
-            cs_para.dump().c_str(), account.c_str(), prev_height, failtx->dump().c_str());
-        // tx execute fail, this tx and follower txs should be pop out for hash must be not match with the new tx witch will replace the fail tx.
-        for (auto & tx : input_txs) {
-            if (tx->get_transaction()->get_tx_nonce() >= failtx->get_transaction()->get_tx_nonce()) {
-                lightunit_build_para->set_fail_tx(tx);
-            }
-        }
         build_para->set_error_code(xblockmaker_error_tx_execute);
         return nullptr;
     }
@@ -69,7 +63,7 @@ xblock_ptr_t        xlightunit_builder_t::build_block(const xblock_ptr_t & prev_
     // set lightunit para by tx result
     lightunit_para.set_input_txs(input_txs);
     lightunit_para.set_transaction_result(exec_result.succ_txs_result);
-    xassert(unconfirm_num == _account_context->get_blockchain()->get_unconfirm_sendtx_num());
+    uint32_t unconfirm_num = _account_context->get_blockchain()->get_unconfirm_sendtx_num();
     lightunit_para.set_account_unconfirm_sendtx_num(unconfirm_num);
 
     base::xreceiptid_state_ptr_t receiptid_state = lightunit_build_para->get_receiptid_state();
@@ -89,35 +83,12 @@ xblock_ptr_t        xfullunit_builder_t::build_block(const xblock_ptr_t & prev_b
                                                     xblock_builder_para_ptr_t & build_para) {
     const std::string & account = prev_block->get_account();
     uint64_t prev_height = prev_block->get_height();
-    std::map<std::string, std::string> propertys;
-    const auto & property_map = prev_state->get_property_hash_map();
-    const auto & property_objs_map = prev_state->get_property_objs();
-    for (auto & v : property_map) {
-        xdataobj_ptr_t db_prop = prev_state->find_property(v.first);
-        if (db_prop == nullptr) {
-            build_para->set_error_code(xblockmaker_error_property_load);
-            xerror("xfullunit_builder_t::build_block fail-property load,%s,account:%s,height=%" PRIu64 ",property(%s) not exist.",
-                  cs_para.dump().c_str(), account.c_str(), prev_height, v.first.c_str());
-            return nullptr;
-        }
-
-        std::string db_prop_hash = xhash_base_t::calc_dataunit_hash(db_prop.get());
-        if (db_prop_hash != v.second) {
-            build_para->set_error_code(xblockmaker_error_property_unmatch);
-            // TODO(jimmy) might happen, because property is not stored by height
-            xerror("xfullunit_builder_t::build_block fail-property unmatch,%s,account:%s,height=%" PRIu64 ",property(%s) hash not match fullunit.",
-                  cs_para.dump().c_str(), account.c_str(), prev_height, v.first.c_str());
-            return nullptr;
-        }
-        base::xstream_t _stream(base::xcontext_t::instance());
-        db_prop->serialize_to(_stream);
-        std::string prop_str((const char *)_stream.data(), _stream.size());
-        propertys[v.first] = prop_str;
-    }
+    auto & bstate = prev_state->get_bstate();
+    std::string property_snapshot;
+    bstate->serialize_to_string(property_snapshot);  // TODO(jimmy)
 
     xfullunit_block_para_t para;
-    para.m_account_propertys = propertys;
-    para.m_account_state = prev_state->get_account_mstate();
+    para.m_property_snapshot = property_snapshot;
     para.m_first_unit_height = prev_state->get_last_full_unit_height();
     para.m_first_unit_hash = prev_state->get_last_full_unit_hash();
 
@@ -138,7 +109,7 @@ xblock_ptr_t        xemptyunit_builder_t::build_block(const xblock_ptr_t & prev_
     proposal_unit->set_consensus_para(cs_para);
     return proposal_unit;
 }
-
+#if 0
 xblock_ptr_t xtop_lightunit_builder2::build_block(xblock_ptr_t const & prev_block,
                                                   xaccount_ptr_t const & prev_state,
                                                   data::xblock_consensus_para_t const & cs_para,
@@ -226,4 +197,6 @@ void xtop_lightunit_builder2::alloc_tx_receiptid(const std::vector<xcons_transac
         }
     }
 }
+#endif
+
 NS_END2

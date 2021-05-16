@@ -274,58 +274,5 @@ xblock_ptr_t xblock_maker_t::get_highest_non_empty_block() const {
     return nullptr;
 }
 
-xblock_ptr_t        xblock_builder_face_t::build_empty_block(const xblock_ptr_t & prev_block,
-                                                    const data::xblock_consensus_para_t & cs_para) {
-    base::xvblock_t* _proposal_block = data::xemptyblock_t::create_next_emptyblock(prev_block.get());
-    xblock_ptr_t proposal_unit;
-    proposal_unit.attach((data::xblock_t*)_proposal_block);
-    proposal_unit->set_consensus_para(cs_para);
-    return proposal_unit;
-}
-
-
-xblock_ptr_t    xblock_builder_face_t::build_genesis_block(const std::string & account, int64_t top_balance) {
-    base::enum_vaccount_addr_type addrtype = base::xvaccount_t::get_addrtype_from_account(account);
-    base::xvblock_t* _proposal_block = nullptr;
-    if (addrtype == base::enum_vaccount_addr_type_block_contract) {
-        _proposal_block = xemptyblock_t::create_genesis_emptyblock(account, base::enum_xvblock_level_table);
-    } else if (addrtype == base::enum_vaccount_addr_type_timer || addrtype == base::enum_vaccount_addr_type_drand) {
-        _proposal_block = xemptyblock_t::create_genesis_emptyblock(account, base::enum_xvblock_level_root);
-    } else if (addrtype == base::enum_vaccount_addr_type_secp256k1_user_account
-                || addrtype == base::enum_vaccount_addr_type_secp256k1_user_sub_account
-                || addrtype == base::enum_vaccount_addr_type_native_contract
-                || addrtype == base::enum_vaccount_addr_type_custom_contract) {
-        _proposal_block = build_genesis_unit(account, top_balance);
-    } else {
-        xassert(false);
-        return nullptr;
-    }
-    xblock_ptr_t _block;
-    _block.attach((data::xblock_t*)_proposal_block);
-    xassert(_block->get_refcount() == 1);
-    return _block;
-}
-
-base::xvblock_t*    xblock_builder_face_t::build_genesis_unit(const std::string & account, int64_t top_balance) {
-    base::xvblock_t* _proposal_block;
-    if (top_balance == 0) {
-        _proposal_block = xemptyblock_t::create_genesis_emptyblock(account, base::enum_xvblock_level_unit);
-    } else {
-        xtransaction_ptr_t tx = make_object_ptr<xtransaction_t>();
-        data::xproperty_asset asset(top_balance);
-        tx->make_tx_transfer(asset);
-        // genesis transfer tx is a special transaction
-        tx->set_same_source_target_address(account);
-        tx->set_fire_timestamp(0);
-        tx->set_expire_duration(0);
-        tx->set_deposit(0);
-        tx->set_digest();
-        tx->set_len();
-        xtransaction_result_t result;
-        result.m_balance_change = top_balance;
-        _proposal_block = xlightunit_block_t::create_genesis_lightunit(account, tx, result);
-    }
-    return _proposal_block;
-}
 
 NS_END2

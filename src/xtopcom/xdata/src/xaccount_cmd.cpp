@@ -23,17 +23,7 @@ do {\
     int32_t err = 0;\
     (prop) = dynamic_xobject_ptr_cast<decltype(prop)::element_type>(get_property_with_type((name), (type), err));\
     if (err != 0) {\
-        xwarn("xaccount_cmd get user property fail. %s ret:0x%x", name.c_str(), err);\
-        return err;\
-    }\
-}while(0)
-
-#define CLONE_NATIVE_PROPERTY(native_obj)\
-do {\
-    int32_t err;\
-    (native_obj) = get_native_property(err);\
-    if ((native_obj) == nullptr) {\
-        xwarn("xaccount_cmd get native property fail. ret:0x%x", err);\
+        xerror("xaccount_cmd get user property fail. %s ret:0x%x", name.c_str(), err);\
         return err;\
     }\
 }while(0)
@@ -357,18 +347,6 @@ int32_t xaccount_cmd::string_get(const std::string& prop_name, std::string& valu
     value = prop->get();
     return xsuccess;
 }
-int32_t xaccount_cmd::string_empty(const std::string& prop_name, bool& empty) {
-    xstring_ptr_t prop;
-    CLONE_PROPERTY(prop, prop_name, base::xstring_t::enum_obj_type);
-    empty = prop->empty();
-    return xsuccess;
-}
-int32_t xaccount_cmd::string_size(const std::string& prop_name, int32_t& size) {
-    xstring_ptr_t prop;
-    CLONE_PROPERTY(prop, prop_name, base::xstring_t::enum_obj_type);
-    size = prop->size();
-    return xsuccess;
-}
 
 int32_t xaccount_cmd::list_create(const std::string& prop_name, bool add_flag) {
     auto ret = create_property(prop_name, base::xstrdeque_t::enum_obj_type);
@@ -457,52 +435,20 @@ int32_t xaccount_cmd::list_clear(xdataobj_ptr_t & obj) {
     return (ret == true) ? xsuccess : xaccount_cmd_property_operate_fail;
 }
 
-int32_t xaccount_cmd::list_get_back(const std::string& prop_name, std::string & value) {
-    xstrdeque_ptr_t prop;
-    CLONE_PROPERTY(prop, prop_name, base::xstrdeque_t::enum_obj_type);
-    bool ret = prop->get_back(value);
-    return (ret == true) ? xsuccess : xaccount_cmd_property_operate_fail;
-}
-int32_t xaccount_cmd::list_get_front(const std::string& prop_name, std::string & value) {
-    xstrdeque_ptr_t prop;
-    CLONE_PROPERTY(prop, prop_name, base::xstrdeque_t::enum_obj_type);
-    bool ret = prop->get_front(value);
-    return (ret == true) ? xsuccess : xaccount_cmd_property_operate_fail;
-}
 int32_t xaccount_cmd::list_get(const std::string& prop_name, const uint32_t index, std::string & value) {
     xstrdeque_ptr_t prop;
     CLONE_PROPERTY(prop, prop_name, base::xstrdeque_t::enum_obj_type);
     bool ret = prop->get(index, value);
     return (ret == true) ? xsuccess : xaccount_cmd_property_operate_fail;
 }
-int32_t xaccount_cmd::list_empty(const std::string& prop_name, bool& empty) {
-    xstrdeque_ptr_t prop;
-    CLONE_PROPERTY(prop, prop_name, base::xstrdeque_t::enum_obj_type);
-    empty = prop->empty();
-    return xsuccess;
-}
+
 int32_t xaccount_cmd::list_size(const std::string& prop_name, int32_t& size) {
     xstrdeque_ptr_t prop;
     CLONE_PROPERTY(prop, prop_name, base::xstrdeque_t::enum_obj_type);
     size = prop->size();
     return xsuccess;
 }
-int32_t xaccount_cmd::list_get_range(const std::string &prop_name, int32_t start, int32_t stop, std::vector<std::string> &values) {
-    xstrdeque_ptr_t prop;
-    CLONE_PROPERTY(prop, prop_name, base::xstrdeque_t::enum_obj_type);
-    int32_t size = prop->size();
-    if (stop > size) {
-        stop = size;
-    }
-    for (int32_t i=start; i < stop; i++) {
-        std::string value;
-        auto ret = prop->get(i, value);
-        assert(ret);
-        values.push_back(value);
-    }
 
-    return xsuccess;
-}
 int32_t xaccount_cmd::list_get_all(const std::string &prop_name, std::vector<std::string> &values) {
     xstrdeque_ptr_t prop;
     CLONE_PROPERTY(prop, prop_name, base::xstrdeque_t::enum_obj_type);
@@ -581,12 +527,6 @@ int32_t xaccount_cmd::map_clear(xdataobj_ptr_t & obj) {
     return xsuccess;
 }
 
-int32_t xaccount_cmd::map_empty(const std::string & prop_name, bool& empty) {
-    xstrmap_ptr_t prop;
-    CLONE_PROPERTY(prop, prop_name, base::xstrmap_t::enum_obj_type);
-    empty = prop->empty();
-    return xsuccess;
-}
 int32_t xaccount_cmd::map_size(const std::string & prop_name, int32_t& size) {
     xstrmap_ptr_t prop;
     CLONE_PROPERTY(prop, prop_name, base::xstrmap_t::enum_obj_type);

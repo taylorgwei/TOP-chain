@@ -12,6 +12,7 @@
 #include "xcommon/xnode_id.h"
 #include "xdata/xelection/xelection_result_store.h"
 #include "xmetrics/xmetrics.h"
+#include "xstore/xstore_face.h"
 
 NS_BEG2(top, election)
 
@@ -53,7 +54,8 @@ public:
     xvnode_house_t(common::xnode_id_t const & node_id,
                    std::string const & sign_key,
                    xobject_ptr_t<base::xvblockstore_t> const & blockstore,
-                   observer_ptr<mbus::xmessage_bus_face_t> const & bus);
+                   observer_ptr<mbus::xmessage_bus_face_t> const & bus,
+                   observer_ptr<store::xstore_face_t> const & store);
     /**
      * @brief Destroy the xvnode house t object
      *
@@ -144,6 +146,7 @@ private:
     std::string m_sign_key;
     xobject_ptr_t<base::xvblockstore_t> m_blockstore;
     observer_ptr<mbus::xmessage_bus_face_t> m_bus;
+    observer_ptr<store::xstore_face_t> m_store;
     mutable std::mutex                         m_lock;
     //uint64_t                           m_vnetwork_id; //network id,refer definition of xip2 at xbase.h
     //uint64_t                           m_vnet_version;//version is same concept as round of election

@@ -18,6 +18,25 @@ class xnative_property_name_t {
 };
 
 XINLINE_CONSTEXPR char const * XPROPERTY_ASSET_TOP                       = "TOP";
+
+
+
+
+XINLINE_CONSTEXPR char const * XPROPERTY_BALANCE_AVAILABLE              = "@@1";  //available balance
+XINLINE_CONSTEXPR char const * XPROPERTY_BALANCE_BURN                   = "@@2";  //burn balance  TODO(jimmy) is need ?
+XINLINE_CONSTEXPR char const * XPROPERTY_BALANCE_LOCK                   = "@@3";  //lock balance
+XINLINE_CONSTEXPR char const * XPROPERTY_BALANCE_PLEDGE_TGAS            = "@@4";  //pledge balance for tgas
+XINLINE_CONSTEXPR char const * XPROPERTY_BALANCE_PLEDGE_VOTE            = "@@5";  //pledge balance for vote
+
+XINLINE_CONSTEXPR char const * XPROPERTY_LOCK_TGAS                      = "@00";  //TODO(jimmy) this property should discuss later
+XINLINE_CONSTEXPR char const * XPROPERTY_UNVOTE_NUM                     = "@01";  // where is voted num ?
+
+XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO                        = "@02";
+XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO_LATEST_SENDTX_NUM      = "1";
+XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO_LATEST_SENDTX_HASH     = "2";
+XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO_RECVTX_NUM             = "3";
+XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO_UNCONFIRM_TX_NUM       = "4";
+
 XINLINE_CONSTEXPR char const * XPROPERTY_CONTRACT_CODE                   = "@1";
 XINLINE_CONSTEXPR char const * XPROPERTY_GLOBAL_NAME                     = "@2";
 XINLINE_CONSTEXPR char const * XPROPERTY_ALIAS_NAME                      = "@3";
@@ -73,7 +92,6 @@ XINLINE_CONSTEXPR const char* XPROPERTY_PLEDGE_VOTE_KEY                  = "@45"
 // the corresponding token num of already expired locked vote
 XINLINE_CONSTEXPR const char* XPROPERTY_EXPIRE_VOTE_TOKEN_KEY            = "@46";
 XINLINE_CONSTEXPR const char* XPORPERTY_CONTRACT_TIME_KEY                = "#102";
-XINLINE_CONSTEXPR const char* XPORPERTY_CONTRACT_ONCHAIN_TIME_ROUND_KEY  = "@100";
 XINLINE_CONSTEXPR const char* XPORPERTY_CONTRACT_ONCHAIN_TIMESTAMP_ROUND_KEY  = "@101";
 XINLINE_CONSTEXPR const char* XPORPERTY_CONTRACT_ONCHAIN_TIMESTAMP_KEY   = "@102";
 

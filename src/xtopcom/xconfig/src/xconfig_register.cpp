@@ -102,7 +102,6 @@ void xconfig_register_t::init_static_config() {
     XADD_OFFCHAIN_PARAMETER(platform_show_cmd);
     XADD_OFFCHAIN_PARAMETER(platform_db_path);
 
-    XADD_OFFCHAIN_PARAMETER(min_account_deposit);
     XADD_OFFCHAIN_PARAMETER(account_send_queue_tx_max_num);
     XADD_OFFCHAIN_PARAMETER(recv_tx_cache_window);
     XADD_OFFCHAIN_PARAMETER(config_property_alias_name_max_len);

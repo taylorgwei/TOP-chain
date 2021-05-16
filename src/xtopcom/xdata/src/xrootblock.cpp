@@ -112,7 +112,8 @@ xblockbody_para_t xrootblock_t::get_blockbody_from_para(const xrootblock_para_t 
 bool xrootblock_t::init(const xrootblock_para_t & para) {
     std::call_once(m_flag, [&] () {
         xblock_para_t block_para;
-        block_para.chainid     = top::config::to_chainid(XGET_CONFIG(chain_name));
+        std::string _chain_name = XGET_CONFIG(chain_name);
+        block_para.chainid     = top::config::to_chainid(_chain_name);
         block_para.block_level = base::enum_xvblock_level_chain;  // every chain has a root block
         block_para.block_class = base::enum_xvblock_class_light;
         block_para.block_type  = base::enum_xvblock_type_boot;

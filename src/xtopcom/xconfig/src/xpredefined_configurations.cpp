@@ -142,7 +142,6 @@ XDEFINE_ONCHAIN_GOVERNANCE_PARAMETER(award_auditor_credit);
 XDEFINE_ONCHAIN_GOVERNANCE_PARAMETER(contract_call_contracts_num);
 
 /* begin of offchain parameters */
-XDEFINE_CONFIGURATION(min_account_deposit);
 XDEFINE_CONFIGURATION(zone_count);
 XDEFINE_CONFIGURATION(cluster_count);
 XDEFINE_CONFIGURATION(executor_max_total_sessions_service_counts);

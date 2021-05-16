@@ -36,6 +36,8 @@ int32_t xtransaction_fee_t::update_tgas_disk_sender(const uint64_t amount, bool 
     if (ret != 0) {
         return ret;
     }
+    // TODO(jimmy) m_account_ctx->get_available_tgas() < m_account_ctx->get_blockchain()->lock_tgas()  may it happen ??
+    // TODO(jimmy) always sub m_account_ctx->get_blockchain()->lock_tgas() anything wrong ?
     uint64_t frozen_tgas = std::min((m_trans->get_transaction()->get_deposit() - tgas_used_deposit) / XGET_ONCHAIN_GOVERNANCE_PARAMETER(tx_deposit_gas_exchange_ratio),
                                      m_account_ctx->get_available_tgas() - m_account_ctx->get_blockchain()->lock_tgas());
     xdbg("tgas_disk sender frozen_tgas: %llu, available_tgas: %llu, lock_tgas: %llu",
@@ -50,13 +52,18 @@ int32_t xtransaction_fee_t::update_tgas_disk_sender(const uint64_t amount, bool 
     m_used_deposit = tgas_used_deposit;
     xdbg("tgas_disk sender, ret: %d, used_deposit: %d, amount: %d", ret, m_used_deposit, amount);
 
-    if(is_contract){
+    if(is_contract && frozen_tgas > 0){
         m_trans->set_current_send_tx_lock_tgas(frozen_tgas);
-        m_account_ctx->set_lock_tgas_change(frozen_tgas);
+        ret = m_account_ctx->uint64_add(XPROPERTY_LOCK_TGAS, frozen_tgas);
+        if (ret != xsuccess) {
+            return ret;
+        }
         xdbg("tgas_disk tx hash: %s, frozen_tgas: %u", m_trans->get_digest_hex_str().c_str(), frozen_tgas);
     }
-    m_account_ctx->set_lock_balance_change(m_trans->get_transaction()->get_deposit());
-    m_account_ctx->set_balance_change(-static_cast<int64_t>(m_trans->get_transaction()->get_deposit()));
+
+    if (m_trans->get_transaction()->get_deposit() > 0) {
+        m_account_ctx->available_balance_to_other_balance(XPROPERTY_BALANCE_LOCK, base::vtoken_t(m_trans->get_transaction()->get_deposit()));
+    }
     xdbg("tgas_disk tx hash: %s, deposit: %u", m_trans->get_digest_hex_str().c_str(), m_trans->get_transaction()->get_deposit());
 
     return ret;
@@ -177,31 +184,55 @@ void xtransaction_fee_t::update_fee_recv() {
 }
 
 int32_t xtransaction_fee_t::update_fee_recv_self() {
-    m_account_ctx->set_lock_balance_change(-static_cast<int64_t>(m_trans->get_transaction()->get_deposit()));
-    m_account_ctx->set_balance_change(m_trans->get_transaction()->get_deposit());
-    int32_t ret = m_account_ctx->top_token_transfer_out(0, get_deposit_usage());
-    xassert(ret == 0);
-    return 0;
+    int32_t ret = xsuccess;
+    if (m_trans->get_transaction()->get_deposit() > 0) {
+        ret = m_account_ctx->other_balance_to_available_balance(XPROPERTY_BALANCE_LOCK, base::vtoken_t(m_trans->get_transaction()->get_deposit()));
+        if (xsuccess != ret) {
+            return ret;
+        }
+    }
+    if (get_deposit_usage() > 0) {
+        ret = m_account_ctx->top_token_transfer_out(0, get_deposit_usage());
+        if (xsuccess != ret) {
+            return ret;
+        }
+    }
+    return ret;
 }
 
 int32_t xtransaction_fee_t::update_fee_confirm() {
-    m_account_ctx->set_lock_balance_change(-static_cast<int64_t>(m_trans->get_transaction()->get_deposit()));
-    m_account_ctx->set_balance_change(m_trans->get_transaction()->get_deposit());
-
+    if (m_trans->get_transaction()->get_deposit() > 0) {
+        m_account_ctx->other_balance_to_available_balance(XPROPERTY_BALANCE_LOCK, base::vtoken_t(m_trans->get_transaction()->get_deposit()));
+    }
     uint32_t last_action_used_deposit = m_trans->get_last_action_used_deposit();
     m_trans->set_current_used_deposit(last_action_used_deposit);
-    int32_t ret = m_account_ctx->top_token_transfer_out(0, last_action_used_deposit);
-    xassert(ret == 0);
-    return 0;
+    int32_t ret = xsuccess;
+    if (last_action_used_deposit > 0) {
+        ret = m_account_ctx->top_token_transfer_out(0, last_action_used_deposit);
+        if (ret != xsuccess) {
+            xerror("xtransaction_fee_t::update_fee_confirm fail-top_token_transfer_out last_action_used_deposit=%d", last_action_used_deposit);
+            return ret;
+        }
+    }
+    xassert(ret == xsuccess);
+    return ret;
 }
 
 int32_t xtransaction_fee_t::update_contract_fee_confirm(uint64_t amount) {
     uint32_t last_action_used_deposit = m_trans->get_last_action_used_deposit();
     auto status = m_trans->get_last_action_exec_status();
+    int32_t ret;
+    if (m_trans->get_last_action_send_tx_lock_tgas() > 0) {
+        ret = m_account_ctx->uint64_sub(XPROPERTY_LOCK_TGAS, m_trans->get_last_action_send_tx_lock_tgas());
+        if (ret != xsuccess) {
+            xerror("xtransaction_fee_t::update_contract_fee_confirm fail-lock tgas sub. last_action_send_tx_lock_tgas=%d", m_trans->get_last_action_send_tx_lock_tgas());
+            return ret;
+        }
+    }
 
-    m_account_ctx->set_lock_tgas_change(-static_cast<int64_t>(m_trans->get_last_action_send_tx_lock_tgas()));
-    m_account_ctx->set_lock_balance_change(-static_cast<int64_t>(m_trans->get_transaction()->get_deposit()));
-    m_account_ctx->set_balance_change(m_trans->get_transaction()->get_deposit());
+    if (m_trans->get_transaction()->get_deposit() > 0) {
+        m_account_ctx->other_balance_to_available_balance(XPROPERTY_BALANCE_LOCK, base::vtoken_t(m_trans->get_transaction()->get_deposit()));
+    }
     xdbg("tgas_disk tx hash: %s, deposit: %u, frozen_tgas: %u, status: %d",
           m_trans->get_digest_hex_str().c_str(), m_trans->get_transaction()->get_deposit(), m_trans->get_last_action_send_tx_lock_tgas(), status);
 
@@ -209,22 +240,25 @@ int32_t xtransaction_fee_t::update_contract_fee_confirm(uint64_t amount) {
     // auto total_tgas = m_fee.get_tgas_usage(true) + target_used_tgas;
     xdbg("tgas_disk tx hash: %s, recv_tx_use_send_tx_tgas: %llu, used_deposit: %u, lock_tgas: %u",
           m_trans->get_digest_hex_str().c_str(), target_used_tgas, last_action_used_deposit, m_trans->get_last_action_send_tx_lock_tgas());
-    auto ret = m_account_ctx->calc_resource(target_used_tgas, m_trans->get_transaction()->get_deposit(), last_action_used_deposit);
+    ret = m_account_ctx->calc_resource(target_used_tgas, m_trans->get_transaction()->get_deposit(), last_action_used_deposit);
     m_trans->set_current_used_tgas(target_used_tgas);
     m_trans->set_current_used_deposit(last_action_used_deposit);
 
-    int64_t lock_balance = m_account_ctx->get_blockchain()->lock_balance();
-    if(status == enum_xunit_tx_exec_status_fail){
-        if (lock_balance >= static_cast<int64_t>(amount)) {
-            xdbg("amount balance change for tx failed: %lld:%llu", lock_balance, amount);
-            m_account_ctx->top_token_transfer_in(amount);
-            m_account_ctx->set_lock_balance_change(-static_cast<int64_t>(amount));
+    if (amount > 0) {
+        // should unlock token by recv tx execute status
+        if(status == enum_xunit_tx_exec_status_fail){
+            // unlock token and revert to available balance if recv tx execute fail
+            ret = m_account_ctx->other_balance_to_available_balance(XPROPERTY_BALANCE_LOCK, base::vtoken_t(amount));
+            if (ret) {
+                xerror("xtransaction_fee_t::update_contract_fee_confirm,fail-revert back token. amount=%ld", amount);
+            }
         } else {
-            xerror("amount balance change is less than amount: %lld:%llu", lock_balance, amount);
+            // unlock token only
+            ret = m_account_ctx->token_withdraw(XPROPERTY_BALANCE_LOCK, base::vtoken_t(amount));
+            if (ret) {
+                xerror("xtransaction_fee_t::update_contract_fee_confirm,fail-withdraw lock token. amount=%ld", amount);
+            }
         }
-    } else {
-        xdbg("amount balance change : %lld:%llu", lock_balance, amount);
-        m_account_ctx->set_lock_balance_change(-static_cast<int64_t>(amount));
     }
     return ret;
 }

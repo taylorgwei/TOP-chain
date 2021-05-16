@@ -134,22 +134,16 @@ public:
     std::string     dump_cert(base::xvqcert_t* qcert) const;
 
  public:
-    virtual const std::map<std::string, std::string> & get_property_hash_map() const {return m_empty_map;}
-    virtual std::string                 get_property_hash(const std::string & prop_name) const {return m_empty_string;}
-    virtual const xnative_property_t &  get_native_property() const {return m_empty_native;}
     virtual const std::vector<xlightunit_tx_info_ptr_t> & get_txs() const { return m_empty_txs;}
     virtual xlightunit_tx_info_ptr_t    get_tx_info(const std::string & txhash) const;
-    virtual xaccount_binlog_t*          get_property_log() const {return nullptr;}
     virtual int64_t                     get_pledge_balance_change_tgas() const {return 0;}
     virtual uint32_t                    get_txs_count() const {return 0;}
     virtual int64_t                     get_balance_change() const {return 0;}
     virtual int64_t                     get_burn_balance_change() const {return 0;}
-    virtual const xaccount_mstate2*     get_fullunit_mstate() const {return nullptr;}
     virtual const std::map<std::string, std::string> * get_fullunit_propertys() const {return nullptr;}
     virtual const std::vector<xobject_ptr_t<xblock_t>> & get_tableblock_units(bool need_parent_cert) const {return m_empty_blocks;}
     virtual void                        dump_block_data(xJson::Value & json) const {return;}
     virtual uint16_t                    get_unconfirm_sendtx_num() const {return 0;}
-    virtual bool                        is_prev_sendtx_confirmed() const {return false;}
     virtual std::map<std::string, xaccount_index_t> get_units_index() const {return {};}
 
  public:

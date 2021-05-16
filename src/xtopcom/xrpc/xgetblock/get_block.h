@@ -111,7 +111,6 @@ private:
     void set_header_info(xJson::Value & header, data::xblock_t * bp);
 
     void set_property_info(xJson::Value & jph, const std::map<std::string, std::string> & ph);
-    void set_native_property_info(xJson::Value & jp, const data::xnative_property_t & property);
     void set_table_info(xJson::Value & jv, data::xblock_t * bp);
     void set_lightunit_info(xJson::Value & j_txs, data::xblock_t * bp);
     void set_fullunit_info(xJson::Value & j_txs, data::xblock_t * bp);

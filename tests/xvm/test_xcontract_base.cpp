@@ -56,22 +56,3 @@ public:
 //     dm.m_store->set_block(block);
 //     return block;
 // }
-
-TEST_F(test_xcontract_base_sub, block_get_and_set) {
-    // auto store_ptr = store::xstore_factory::create_store_with_memdb(nullptr);
-    // test_datamock_t dm(store_ptr.get());
-    // std::string address = "test.contract";
-
-    // xaccount_context_t ac(address, store_ptr.get());
-    // set_contract_helper(make_shared<xcontract_helper>(&ac, top::common::xaccount_address_t{address}, address));
-
-    // auto block = test_xcontract_base_create_block(dm, address, 111);
-
-    // std::string value = READ_FROM_BLOCK(block, "_default");
-    // ASSERT_TRUE(!value.empty());
-
-    // xstream_t stream(xcontext_t::instance(), (uint8_t*) value.data(), value.size());
-    // test_xcontract_base_entity ent(0);
-    // ent.serialize_from(stream);
-    // ASSERT_TRUE(ent.value == 111);
-}

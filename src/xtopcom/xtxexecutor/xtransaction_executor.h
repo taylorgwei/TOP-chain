@@ -20,8 +20,7 @@ using data::xcons_transaction_ptr_t;
 struct xbatch_txs_result_t {
     xtransaction_result_t                   succ_txs_result;
     std::vector<xcons_transaction_ptr_t>    m_exec_succ_txs;
-    xcons_transaction_ptr_t                 m_exec_fail_tx{nullptr};
-    int32_t                                 m_exec_fail_tx_ret{0};
+    std::vector<xcons_transaction_ptr_t>    m_exec_fail_txs;
 };
 
 class xtransaction_executor {
@@ -30,8 +29,8 @@ class xtransaction_executor {
         xbatch_txs_result_t & txs_result);
 
  private:
-    static int32_t exec_tx(xaccount_context_t * account_context, const xcons_transaction_ptr_t & tx, xtransaction_result_t & result);
-    static int32_t exec_one_tx(xaccount_context_t * account_context, const xcons_transaction_ptr_t & tx, xtransaction_result_t & result);
+    static int32_t exec_tx(xaccount_context_t * account_context, const xcons_transaction_ptr_t & tx);
+    static int32_t exec_one_tx(xaccount_context_t * account_context, const xcons_transaction_ptr_t & tx);
 };
 
 NS_END2
