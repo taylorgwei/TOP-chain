@@ -1190,7 +1190,11 @@ int32_t xaccount_context_t::uint64_set(const std::string& key, uint64_t value) {
 }
 
 bool xaccount_context_t::get_transaction_result(xtransaction_result_t& result) {
+    // do some auto property make things
+    set_account_create_time();
+
     save_succ_result();
+
     result.m_contract_txs       = m_succ_contract_txs;
     result.m_property_binlog    = m_succ_property_binlog;
     return true;
@@ -1255,6 +1259,15 @@ void xaccount_context_t::update_succ_tx_info() {
         set_tx_info_unconfirm_tx_num(new_unconfirm_new);
     }
 }
+
+void xaccount_context_t::set_account_create_time() {
+    if (false == get_bstate()->find_property(XPROPERTY_ACCOUNT_CREATE_TIME)) {
+        auto propobj = get_bstate()->new_uint64_var(XPROPERTY_ACCOUNT_CREATE_TIME, m_canvas.get());
+        uint64_t create_time = m_timer_height == 0 ? base::TOP_BEGIN_GMTIME : m_timer_height;
+        propobj->set(create_time, m_canvas.get());
+    }
+}
+
 void xaccount_context_t::save_succ_result() {
     if (!m_contract_txs.empty()) {
         for (auto & tx : m_contract_txs) {
@@ -1273,14 +1286,9 @@ void xaccount_context_t::revert_to_last_succ_result() {
         m_contract_txs.clear();
     }
     // roll back to last succ result
-    if (!m_succ_property_binlog.empty()) {
-        auto & bstate = m_account->get_bstate();
-        bstate->apply_changes_of_binlog(m_succ_property_binlog);
-        m_canvas = make_object_ptr<base::xvcanvas_t>(m_succ_property_binlog);
-    } else {
-
-        m_canvas = make_object_ptr<base::xvcanvas_t>();
-    }
+    auto & bstate = m_account->get_bstate();
+    bstate->apply_changes_of_binlog(m_succ_property_binlog);
+    m_canvas = make_object_ptr<base::xvcanvas_t>(m_succ_property_binlog);
 }
 
 void xaccount_context_t::set_source_pay_info(const data::xaction_asset_out& source_pay_info) {
@@ -1292,14 +1300,22 @@ const data::xaction_asset_out& xaccount_context_t::get_source_pay_info() {
 }
 
 void xaccount_context_t::get_latest_sendtx_nonce_hash(uint64_t & nonce, uint256_t & hash) {
+    // 1.get latest sendtx from contract created txs
     if (!m_contract_txs.empty()) {
         auto & latest_sendtx = *m_contract_txs.rbegin();
         nonce = latest_sendtx->get_transaction()->get_tx_nonce();
         hash = latest_sendtx->get_transaction()->digest();
-    } else {
-        nonce = m_account->get_latest_send_trans_number();
-        hash = m_account->account_send_trans_hash();
+        return;
     }
+    // 2.get latest sendtx from current tx
+    if (m_currect_transaction->is_send_tx() || m_currect_transaction->is_self_tx()) {
+        nonce = m_currect_transaction->get_transaction()->get_tx_nonce();
+        hash = m_currect_transaction->get_transaction()->digest();
+        return;
+    }
+    // 3.get latest sendtx from account
+    nonce = m_account->get_latest_send_trans_number();
+    hash = m_account->account_send_trans_hash();
 }
 
 int32_t xaccount_context_t::create_transfer_tx(const std::string & receiver, uint64_t amount) {

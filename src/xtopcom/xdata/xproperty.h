@@ -30,12 +30,12 @@ XINLINE_CONSTEXPR char const * XPROPERTY_BALANCE_PLEDGE_VOTE            = "@@5";
 
 XINLINE_CONSTEXPR char const * XPROPERTY_LOCK_TGAS                      = "@00";  //TODO(jimmy) this property should discuss later
 XINLINE_CONSTEXPR char const * XPROPERTY_UNVOTE_NUM                     = "@01";  // where is voted num ?
-
 XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO                        = "@02";
 XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO_LATEST_SENDTX_NUM      = "1";
 XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO_LATEST_SENDTX_HASH     = "2";
 XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO_RECVTX_NUM             = "3";
 XINLINE_CONSTEXPR char const * XPROPERTY_TX_INFO_UNCONFIRM_TX_NUM       = "4";
+XINLINE_CONSTEXPR char const * XPROPERTY_ACCOUNT_CREATE_TIME            = "@03";
 
 XINLINE_CONSTEXPR char const * XPROPERTY_CONTRACT_CODE                   = "@1";
 XINLINE_CONSTEXPR char const * XPROPERTY_GLOBAL_NAME                     = "@2";

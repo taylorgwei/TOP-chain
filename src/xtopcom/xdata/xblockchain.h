@@ -41,11 +41,9 @@ class xblockchain2_t : public xbase_dataobj_t<xblockchain2_t, xdata_type_blockch
     xobject_ptr_t<xblockchain2_t>   clone_state();
 
  public:  // api for basic blockchain
-    const std::string & get_account()const {return m_account;}
-    base::enum_xvblock_level    get_block_level() const {return m_block_level;}
+    const std::string & get_account()const {return m_bstate->get_account();}
+    base::enum_xvblock_level    get_block_level() const {return (base::enum_xvblock_level)m_bstate->get_block_level();}
     uint64_t            get_chain_height()const {return m_last_state_block_height;}
-    void                set_account_create_time(uint64_t create_time) {m_create_time = create_time;}
-    uint64_t            get_account_create_time() const {return m_create_time;}
     uint64_t            get_last_height()const {return m_last_state_block_height;}
     const std::string & get_last_block_hash()const {return m_last_state_block_hash;}
     std::string         to_basic_string() const;
@@ -65,6 +63,7 @@ class xblockchain2_t : public xbase_dataobj_t<xblockchain2_t, xdata_type_blockch
 
     inline uint64_t     lock_tgas() const {return uint64_property_get(XPROPERTY_LOCK_TGAS);}
     inline uint64_t     unvote_num() const {return uint64_property_get(XPROPERTY_UNVOTE_NUM);}
+    uint64_t            get_account_create_time() const {return uint64_property_get(XPROPERTY_ACCOUNT_CREATE_TIME);}
 
     uint32_t            get_unconfirm_sendtx_num() const;
     uint64_t            get_latest_send_trans_number() const;
@@ -99,10 +98,6 @@ class xblockchain2_t : public xbase_dataobj_t<xblockchain2_t, xdata_type_blockch
     bool        add_full_unit(const xblock_t* block);
     bool        add_table(const xblock_t* block);
     void        update_block_height_hash_info(const xblock_t * block);
-    void        update_account_create_time(const xblock_t * block);
-
- public:  // old apis
-    const std::string & address() {return m_account;}
 
  public:  // property apis
     bool                string_get(const std::string& prop, std::string& value) const;
@@ -116,15 +111,10 @@ class xblockchain2_t : public xbase_dataobj_t<xblockchain2_t, xdata_type_blockch
     const xobject_ptr_t<base::xvbstate_t> & get_bstate() const {return m_bstate;}
 
  private:
-    uint8_t                     m_version{0};
-    std::string                 m_account;
-    base::enum_xvblock_level    m_block_level;
     uint64_t                    m_last_state_block_height{0};
     std::string                 m_last_state_block_hash{};
     uint64_t                    m_last_full_block_height{0};
     std::string                 m_last_full_block_hash{};
-    uint64_t                    m_property_confirm_height{0};
-    uint64_t                    m_create_time{0};
     std::map<uint16_t, std::string> m_ext;
     xobject_ptr_t<base::xvbstate_t>     m_bstate{nullptr};
 };

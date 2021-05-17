@@ -176,6 +176,7 @@ class xaccount_context_t {
     void    set_tx_info_latest_sendtx_hash(const std::string & hash);
     void    set_tx_info_recvtx_num(uint64_t num);
     void    get_latest_sendtx_nonce_hash(uint64_t & nonce, uint256_t & hash);
+    void    set_account_create_time();
 
  public:
     uint32_t get_token_price() const ;
