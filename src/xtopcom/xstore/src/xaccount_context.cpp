@@ -1175,19 +1175,7 @@ int32_t xaccount_context_t::uint64_sub(const std::string& key, uint64_t change) 
     xdbg("xaccount_context_t::uint64_sub property=%s,old_value=%ld,new_value=%ld,change=%ld", key.c_str(), oldvalue, newvalue, change);
     return xsuccess;
 }
-int32_t xaccount_context_t::uint64_set(const std::string& key, uint64_t value) {
-    auto & bstate = get_bstate();
-    auto propobj = load_uin64_for_write(bstate.get(), key);
-    CHECK_PROPERTY_NULL_RETURN(propobj, "xaccount_context_t::uint64_set", key);
-    uint64_t oldvalue = propobj->get();
-    if (oldvalue == value) {
-        xerror("xaccount_context_t::uint64_set fail-same value.value=%ld", value);
-        return xaccount_property_operate_fail;
-    }
-    propobj->set(value, m_canvas.get());
-    xdbg("xaccount_context_t::uint64_set property=%s,old_value=%ld,new_value=%ld", key.c_str(), oldvalue, value);
-    return xsuccess;
-}
+
 
 bool xaccount_context_t::get_transaction_result(xtransaction_result_t& result) {
     save_succ_result();
