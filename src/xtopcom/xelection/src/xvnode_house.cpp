@@ -21,16 +21,20 @@ using namespace base;
 using namespace data;
 
 xvnode_house_t::xvnode_house_t(common::xnode_id_t const & node_id, std::string const & sign_key,
-        xobject_ptr_t<base::xvblockstore_t> const & blockstore, observer_ptr<mbus::xmessage_bus_face_t> const & bus):
+        xobject_ptr_t<base::xvblockstore_t> const & blockstore, observer_ptr<mbus::xmessage_bus_face_t> const & bus,
+        observer_ptr<store::xstore_face_t> const & store):
 xvnodesrv_t(),
 m_node_id(node_id),
 m_sign_key(sign_key),
 m_blockstore(blockstore),
-m_bus(bus) {
+m_bus(bus),
+m_store(store) {
 }
 
 base::xauto_ptr<base::xvnode_t> xvnode_house_t::get_node(const xvip2_t & target_node) const {
-    xdbg("[xvnode_house_t::get_node] target node : {%" PRIu64 ", %" PRIu64 "}", target_node.high_addr, target_node.low_addr);
+    xdbg("[xvnode_house_t::get_node] address=%s,height=%ld,target node : {%" PRIu64 ", %" PRIu64 "}",
+        get_elect_address(target_node).c_str(), get_network_height_from_xip2(target_node),
+        target_node.high_addr, target_node.low_addr);
     base::xauto_ptr<base::xvnodegroup_t> group_ptr = get_group_internal(target_node);
     if (group_ptr == nullptr) {
         const uint64_t group_key = get_group_key(target_node);
@@ -171,26 +175,29 @@ void xvnode_house_t::load_group_from_store(const xvip2_t & target_node) {
     if (blk_ptr == nullptr)
         return;
 
-    xblock_t *blk = (xblock_t*) blk_ptr.get();
-    blk->add_ref();
-
-    xblock_ptr_t block{};
-    block.attach(blk);
+    xaccount_ptr_t state = m_store->get_target_state(blk_ptr.get());
+    if (nullptr == state) {
+        xwarn("xvnode_house_t::load_group_from_store get target state fail.block=%s", blk_ptr->dump().c_str());
+        return;
+    }
 
     std::string result;
-    const xnative_property_t & native_property = block->get_native_property();
-    auto property_names = data::election::get_property_name_by_addr(common::xaccount_address_t{block->get_block_owner()});
+    auto property_names = data::election::get_property_name_by_addr(common::xaccount_address_t{blk_ptr->get_account()});
     using top::data::election::xelection_result_store_t;
     for (auto const & property : property_names) {
-        native_property.native_string_get(property, result);
+        state->string_get(property, result);
         if (result.empty()) {
+            xwarn("[xvnode_house_t::load_group_from_store] string get null. %s, %" PRIu64 ",property=%s",
+                blk_ptr->get_account().c_str(), blk_ptr->get_height(), property.c_str());
             continue;
         }
         auto const & election_result_store = codec::msgpack_decode<xelection_result_store_t>({std::begin(result), std::end(result)});
         if (election_result_store.empty()) {
-            xwarn("[xvnode_house_t::load_group_from_store] elect result is empty! %s, %" PRIu64, block->get_block_owner().c_str(), block->get_height());
+            xwarn("[xvnode_house_t::load_group_from_store] elect result is empty! %s, %" PRIu64, blk_ptr->get_account().c_str(), blk_ptr->get_height());
             continue;
         }
+        xdbg("[xvnode_house_t::load_group_from_store] add_group succ. %s, %" PRIu64 ",property=%s,value_size=%zu",
+            elect_address.c_str(), elect_height, property.c_str(), result.size());
         common::xnetwork_id_t nid{uint32_t(get_network_id_from_xip2(target_node))};
         add_group(elect_address, elect_height, election_result_store, nid);
     }
@@ -321,11 +328,12 @@ void xvnode_house_t::add_group(const std::string &elect_address, uint64_t elect_
             xdbg("[vnode_house_add_group][overview] %s %lu %lu (%u %u %u)", elect_address.c_str(), elect_height, group_key, zone_id, cluster_id, group_id);
             for (auto &it: pair.second) {
 
-                const xvip2_t &xvip2 = it->get_xip2_addr();
+                const xvip2_t &nodexip2 = it->get_xip2_addr();
 
-                xdbg("[vnode_house_add_group][node] %s %lu %lu", it->get_account().c_str(),
-                                xip2.high_addr,
-                                xip2.low_addr);
+                xdbg("[vnode_house_add_group][node] elect={%s,height=%ld},node={%s %lu : %lu},group={%lu : %lu}",
+                    elect_address.c_str(), elect_height,
+                    it->get_account().c_str(),
+                    nodexip2.high_addr, nodexip2.low_addr, xip2.high_addr, xip2.low_addr);
             }
 #endif
             base::xauto_ptr<base::xvnodegroup_t> _consensus_group(new xvnode_group_wrap_t(pair.first, group_enable_map[pair.first], pair.second));

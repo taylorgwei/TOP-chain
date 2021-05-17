@@ -35,7 +35,7 @@ void xconfig_onchain_loader_t::start() {
         m_monitor = new xconfig_bus_monitor(this);
         m_monitor->init();
     }
-    
+
     m_logic_timer->watch("xconfig_onchain_parameter_loader", 1, std::bind(&xconfig_onchain_loader_t::chain_timer, shared_from_this(), std::placeholders::_1));
 }
 
@@ -82,7 +82,7 @@ void xconfig_onchain_loader_t::update(mbus::xevent_ptr_t e) {
     if (e->minor_type != mbus::xevent_store_t::type_block_to_db) {
         return;
     }
-    
+
     mbus::xevent_store_block_to_db_ptr_t block_event = dynamic_xobject_ptr_cast<mbus::xevent_store_block_to_db_t>(e);
 
     if (block_event == nullptr) {
@@ -99,12 +99,17 @@ void xconfig_onchain_loader_t::update(mbus::xevent_ptr_t e) {
             return;
         }
 
-        auto proposal_detail = block->get_native_property().string_get(CURRENT_VOTED_PROPOSAL);
-        if (proposal_detail == nullptr) {
+        xaccount_ptr_t state = m_store_ptr->get_target_state(block.get());
+        if (nullptr == state) {
+            xwarn("xconfig_onchain_loader_t::update get target state fail.block=%s", block->dump().c_str());
             return;
         }
-        std::string voted_proposal = proposal_detail->get();
-
+        std::string voted_proposal;
+        state->string_get(CURRENT_VOTED_PROPOSAL, voted_proposal);
+        if (voted_proposal.empty()) {
+            xwarn("xconfig_onchain_loader_t::update get property fail.block=%s", block->dump().c_str());
+            return;
+        }
         tcc::proposal_info proposal{};
 
         top::base::xstream_t stream(base::xcontext_t::instance(), (uint8_t *)voted_proposal.data(), voted_proposal.size());

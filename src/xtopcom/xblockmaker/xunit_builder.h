@@ -20,6 +20,7 @@ class xlightunit_builder_para_t : public xblock_builder_para_face_t {
     const std::vector<xcons_transaction_ptr_t> &    get_origin_txs() const {return m_origin_txs;}
     const std::vector<xcons_transaction_ptr_t> &    get_fail_txs() const {return m_fail_txs;}
     void                                            set_fail_tx(const xcons_transaction_ptr_t & tx) {m_fail_txs.push_back(tx);}
+    void                                            set_fail_txs(const std::vector<xcons_transaction_ptr_t> & txs) {m_fail_txs = txs;}
     const base::xreceiptid_state_ptr_t &            get_receiptid_state() const {return m_receiptid_state;}
  private:
     std::vector<xcons_transaction_ptr_t>        m_origin_txs;
@@ -54,6 +55,7 @@ class xemptyunit_builder_t : public xblock_builder_face_t {
                                             xblock_builder_para_ptr_t & build_para);
 };
 
+#if 0// TODO(jimmy)
 class xtop_lightunit_builder2 : public xblock_builder_face_t {
 public:
     xblock_ptr_t build_block(xblock_ptr_t const & prev_block,
@@ -65,5 +67,5 @@ private:
     void alloc_tx_receiptid(const std::vector<xcons_transaction_ptr_t> & input_txs, const base::xreceiptid_state_ptr_t & receiptid_state);
 };
 using xlightunit_builder2_t = xtop_lightunit_builder2;
-
+#endif
 NS_END2

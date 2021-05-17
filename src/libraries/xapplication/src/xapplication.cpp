@@ -58,7 +58,7 @@ xtop_application::xtop_application(common::xnode_id_t const & node_id, xpublic_k
 #ifdef ENABLE_METRICS
     m_datastat = make_unique<datastat::xdatastat_t>(make_observer(m_bus.get()));
 #endif
-    m_nodesvr_ptr = make_object_ptr<election::xvnode_house_t>(node_id, sign_key, m_blockstore, make_observer(m_bus.get()));
+    m_nodesvr_ptr = make_object_ptr<election::xvnode_house_t>(node_id, sign_key, m_blockstore, make_observer(m_bus.get()), make_observer(m_store.get()));
 #ifdef MOCK_CA
     m_cert_ptr = make_object_ptr<xschnorrcert_t>((uint32_t)1);
 #else
@@ -258,7 +258,7 @@ bool xtop_application::create_genesis_accounts() {
     for (auto const & pair : genesis_accounts) {
         common::xaccount_address_t account_address{pair.first};
         if (m_blockstore->exist_genesis_block(account_address.value())) {
-            xdbg("xtop_contract_manager::setup_chain blockchain account %s genesis block exist", account_address.c_str());
+            xdbg("xtop_application::create_genesis_accounts blockchain account %s genesis block exist", account_address.c_str());
             continue;
         }
         if (!create_genesis_account(pair.first, pair.second)) {
@@ -364,13 +364,24 @@ bool xtop_application::is_beacon_account() const noexcept {
     auto const & user_params = data::xuser_params::get_instance();
     top::common::xnode_id_t node_id = top::common::xnode_id_t{user_params.account};
 
+    xaccount_ptr_t xxx_state = m_store->query_account(sys_contract_rec_elect_rec_addr);
+    if (nullptr == xxx_state) {
+        xerror("JIMMY xtop_application::is_beacon_account");
+        return false;
+    }
+
     std::string result;
     base::xauto_ptr<base::xvblock_t> latest_vblock = m_blockstore->get_latest_committed_block(base::xvaccount_t(sys_contract_rec_elect_rec_addr));
-    xblock_t* block = dynamic_cast<xblock_t*>(latest_vblock.get());
+    xaccount_ptr_t state = m_store->get_target_state(latest_vblock.get());
+    if (nullptr == state) {
+        xwarn("xtop_application::is_beacon_account get target state fail.block=%s", latest_vblock->dump().c_str());
+        return false;
+    }
+
     auto property_names = data::election::get_property_name_by_addr(common::xaccount_address_t{sys_contract_rec_elect_rec_addr});
     common::xnetwork_id_t network_id{top::config::to_chainid(XGET_CONFIG(chain_name))};
     for (auto const & property : property_names) {
-        if (block->get_native_property().native_string_get(property, result) || result.empty()) {
+        if (false == state->string_get(property, result) || result.empty()) {
             xwarn("xtop_application::is_beacon_account no property %s", property.c_str());
             continue;
         }

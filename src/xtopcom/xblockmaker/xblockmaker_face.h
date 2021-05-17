@@ -205,12 +205,6 @@ class xblock_builder_face_t {
                                                   const data::xaccount_ptr_t & prev_state,
                                                   const data::xblock_consensus_para_t & cs_para,
                                                   xblock_builder_para_ptr_t & build_para) = 0;
-    virtual xblock_ptr_t                build_empty_block(const xblock_ptr_t & prev_block,
-                                                        const data::xblock_consensus_para_t & cs_para);
-
-    xblock_ptr_t                        build_genesis_block(const std::string & account, int64_t top_balance = 0);
- protected:
-    base::xvblock_t*                    build_genesis_unit(const std::string & account, int64_t top_balance);
 };
 
 using xblock_builder_face_ptr_t = std::shared_ptr<xblock_builder_face_t>;

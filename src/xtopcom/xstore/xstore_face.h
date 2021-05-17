@@ -27,36 +27,28 @@ class xstore_face_t : public base::xvdbstore_t {
  protected:
     virtual ~xstore_face_t() {}
  public:
-    virtual xaccount_ptr_t query_account(const std::string& address) = 0;
+    virtual xaccount_ptr_t query_account(const std::string& address) const = 0;
+    virtual xaccount_ptr_t get_target_state(base::xvblock_t* block) const = 0;
+    virtual bool           string_property_get(base::xvblock_t* block, const std::string& prop, std::string& value) const = 0;
 
     virtual uint64_t get_blockchain_height(const std::string& account) = 0;
 
     virtual data::xblock_t* get_block_by_height(const std::string& account, uint64_t height) const = 0;
 
     virtual int32_t get_map_property(const std::string& account, uint64_t height, const std::string& name, std::map<std::string, std::string>& value) = 0;
-    virtual int32_t  get_list_property(const std::string& account, uint64_t height, const std::string& name, std::vector<std::string>& value) = 0;
     virtual int32_t get_string_property(const std::string& account, uint64_t height, const std::string& name, std::string& value) = 0;
-    virtual int32_t get_property(const std::string& account, uint64_t height, const std::string& name, xdataobj_ptr_t& obj) = 0;
     virtual xblockchain2_t* clone_account(const std::string& account) const = 0;
-    virtual xobject_ptr_t<base::xdataobj_t> clone_property(const std::string& account, const std::string& property_name) = 0;
 
     virtual xtransaction_store_ptr_t query_transaction_store(const uint256_t &hash) = 0;
 
     // property operation api
     virtual int32_t string_get(const std::string& account, const std::string& key, std::string& value) const = 0;
-    virtual int32_t string_empty(const std::string& account, const std::string& key, bool& empty) = 0;
-    virtual int32_t string_size(const std::string& account, const std::string& key, int32_t& size) = 0;
 
-    virtual int32_t list_get_back(const std::string& account, const std::string& key, std::string & value) = 0;
-    virtual int32_t list_get_front(const std::string& account, const std::string& key, std::string & value) = 0;
     virtual int32_t list_get(const std::string& account, const std::string& key, const uint32_t index, std::string & value) = 0;
-    virtual int32_t list_empty(const std::string& account, const std::string& key, bool& empty) = 0;
     virtual int32_t list_size(const std::string& account, const std::string& key, int32_t& size) = 0;
-    virtual int32_t list_get_range(const std::string& account, const std::string &key, int32_t start, int32_t stop, std::vector<std::string> &values) = 0;
     virtual int32_t list_get_all(const std::string& account, const std::string &key, std::vector<std::string> &values) = 0;
     virtual void    list_clear(const std::string& account, const std::string &key) = 0;
     virtual int32_t map_get(const std::string& account, const std::string & key, const std::string & field, std::string & value) = 0;
-    virtual int32_t map_empty(const std::string& account, const std::string & key, bool& empty) = 0;
     virtual int32_t map_size(const std::string& account, const std::string & key, int32_t& size) = 0;
     virtual int32_t map_copy_get(const std::string& account, const std::string & key, std::map<std::string, std::string> & map) const = 0;
 

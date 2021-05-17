@@ -81,36 +81,29 @@ class xstore final: public xstore_face_t {
 
  public://other old api
 
-    xaccount_ptr_t query_account(const std::string& address) override;
+    xaccount_ptr_t query_account(const std::string& address) const override;
+    xaccount_ptr_t get_target_state(base::xvblock_t* block) const override;
+    xaccount_ptr_t get_target_state(const std::string &address, uint64_t height) const;
+    bool           string_property_get(base::xvblock_t* block, const std::string& prop, std::string& value) const override;
 
     uint64_t get_blockchain_height(const std::string& account) override;
 
     data::xblock_t* get_block_by_height(const std::string& account, uint64_t height) const override;
 
     int32_t get_map_property(const std::string& account, uint64_t height, const std::string& name, std::map<std::string, std::string>& value) override;
-    int32_t  get_list_property(const std::string& account, uint64_t height, const std::string& name, std::vector<std::string>& value) override;
     int32_t get_string_property(const std::string& account, uint64_t height, const std::string& name, std::string& value) override;
-    int32_t get_property(const std::string& account, uint64_t height, const std::string& name, xdataobj_ptr_t& obj) override;
     xblockchain2_t* clone_account(const std::string& account) const override;
-    xobject_ptr_t<base::xdataobj_t> clone_property(const std::string& account, const std::string& property_name) override;
 
     xtransaction_store_ptr_t query_transaction_store(const uint256_t &hash) override;
 
     // property operation api
     int32_t string_get(const std::string& account, const std::string& key, std::string& value) const override;
-    int32_t string_empty(const std::string& account, const std::string& key, bool& empty) override;
-    int32_t string_size(const std::string& account, const std::string& key, int32_t& size) override;
 
-    int32_t list_get_back(const std::string& account, const std::string& key, std::string & value) override;
-    int32_t list_get_front(const std::string& account, const std::string& key, std::string & value) override;
     int32_t list_get(const std::string& account, const std::string& key, const uint32_t index, std::string & value) override;
-    int32_t list_empty(const std::string& account, const std::string& key, bool& empty) override;
     int32_t list_size(const std::string& account, const std::string& key, int32_t& size) override;
-    int32_t list_get_range(const std::string& account, const std::string &key, int32_t start, int32_t stop, std::vector<std::string> &values) override;
     int32_t list_get_all(const std::string& account, const std::string &key, std::vector<std::string> &values) override;
     void    list_clear(const std::string& account, const std::string &key) override;
     int32_t map_get(const std::string& account, const std::string & key, const std::string & field, std::string & value) override;
-    int32_t map_empty(const std::string& account, const std::string & key, bool& empty) override;
     int32_t map_size(const std::string& account, const std::string & key, int32_t& size) override;
     int32_t map_copy_get(const std::string& account, const std::string & key, std::map<std::string, std::string> & map) const override;
 
@@ -152,7 +145,6 @@ public:
     bool execute_tableblock_light(xblockchain2_t* account, const xblock_t *block);
     bool execute_tableblock_full(xblockchain2_t* account, xfull_tableblock_t *block, std::map<std::string, std::string> & kv_pairs);
 
-    xdataobj_ptr_t get_property(const std::string & account, const std::string & prop_name, int32_t type);
     bool set_transaction_hash(xstore_transaction_t& txn, const uint64_t unit_height, const std::string &txhash, enum_transaction_subtype txtype, xtransaction_t* tx);
 
     bool save_block(const std::string & store_path, data::xblock_t* block);
@@ -164,7 +156,7 @@ public:
 
     base::xdataobj_t* get(const xstore_key_t & key) const;
     bool set(const std::string& key, base::xdataobj_t* object);
-    bool load_blocks_from_full_or_state(const xaccount_ptr_t & state, const xblock_ptr_t & latest_block, std::map<uint64_t, xblock_ptr_t> & blocks);
+    bool load_blocks_from_full_or_state(const xaccount_ptr_t & state, const xblock_ptr_t & latest_block, std::map<uint64_t, xblock_ptr_t> & blocks) const;
 
  private:
     std::string                     m_store_path;

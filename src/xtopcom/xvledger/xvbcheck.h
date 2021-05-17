@@ -55,7 +55,7 @@ namespace top
                 if(input_entitis.size() != output_entitis.size())
                     return false;
                 
-                for(int indx = 0; indx < input_entitis.size(); ++indx)
+                for(int indx = 0; indx < (int)input_entitis.size(); ++indx)
                 {
                     xventity_t * ent = input_entitis[indx];
                     if(NULL == ent)

@@ -63,17 +63,24 @@ void xtop_top_chain_application::load_last_election_data() {
                 xerror("xtop_top_chain_application::load_last_election_data has no latest lightunit. addr=%s", addr.c_str());
                 continue;
             }
-            xblock_t * latest_block = dynamic_cast<xblock_t *>(latest_vblock.get());
-            assert(latest_block);
-            auto block_height = latest_block->get_height();
-            if (!latest_block->get_native_property().native_string_get(property, result) && !result.empty()) {
+            xaccount_ptr_t latest_vblock_state = m_application->store()->get_target_state(latest_vblock.get());
+            if (nullptr == latest_vblock_state) {
+                xerror("xtop_top_chain_application::load_last_election_data get target state fail.block=%s", latest_vblock->dump().c_str());
+                continue;
+            }
+            auto block_height = latest_vblock->get_height();
+            if (true == latest_vblock_state->string_get(property, result) && !result.empty()) {
                 auto const & election_result_store = codec::msgpack_decode<xelection_result_store_t>({std::begin(result), std::end(result)});
                 if ((addr == sys_contract_rec_elect_rec_addr || addr == sys_contract_rec_elect_zec_addr || addr == sys_contract_zec_elect_consensus_addr) && block_height != 0) {
                     auto prev_latest_vblock = data::xblocktool_t::get_committed_lightunit(m_application->blockstore().get(), addr, block_height - 1);
                     if (prev_latest_vblock != nullptr) {
-                        xblock_t * next_to_last_block = dynamic_cast<xblock_t *>(prev_latest_vblock.get());
-                        auto next_to_last_height = next_to_last_block->get_height();
-                        if (!next_to_last_block->get_native_property().native_string_get(property, result_next_to_last) && !result_next_to_last.empty()) {
+                        auto next_to_last_height = prev_latest_vblock->get_height();
+                        xaccount_ptr_t prev_latest_vblock_state = m_application->store()->get_target_state(prev_latest_vblock.get());
+                        if (nullptr == prev_latest_vblock_state) {
+                            xerror("xtop_top_chain_application::load_last_election_data prev block get target state fail.block=%s", prev_latest_vblock->dump().c_str());
+                            continue;
+                        }
+                        if (true == prev_latest_vblock_state->string_get(property, result_next_to_last) && !result_next_to_last.empty()) {
                             auto const & election_result_store_last =
                                 codec::msgpack_decode<xelection_result_store_t>({std::begin(result_next_to_last), std::end(result_next_to_last)});
                             on_election_data_updated(election_result_store_last, zone_id, next_to_last_height);

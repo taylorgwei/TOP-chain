@@ -26,8 +26,8 @@ class xtransaction_maker {
         tx->set_len();
 
         // update account send tx hash and number
-        account->set_account_send_trans_hash(tx->digest());
-        account->set_account_send_trans_number(tx->get_tx_nonce());
+        // account->set_account_send_trans_hash(tx->digest());
+        // account->set_account_send_trans_number(tx->get_tx_nonce());
         return tx;
     }
 
@@ -45,8 +45,8 @@ class xtransaction_maker {
         tx->set_digest();
         tx->set_len();
         // update account send tx hash and number
-        account->set_account_send_trans_hash(tx->digest());
-        account->set_account_send_trans_number(tx->get_tx_nonce());
+        // account->set_account_send_trans_hash(tx->digest());
+        // account->set_account_send_trans_number(tx->get_tx_nonce());
         return tx;
     }
 };

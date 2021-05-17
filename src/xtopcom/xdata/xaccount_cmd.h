@@ -46,8 +46,6 @@ class xaccount_cmd {
     int32_t string_create(const std::string& prop_name, bool add_flag = true);
     int32_t string_set(const std::string& prop_name, const std::string& value, bool add_flag = true);
     int32_t string_get(const std::string& prop_name, std::string& value);
-    int32_t string_empty(const std::string& prop_name, bool& empty);
-    int32_t string_size(const std::string& prop_name, int32_t& size);
 
     int32_t list_create(const std::string& prop_name, bool add_flag = true);
     int32_t list_push_back(const std::string& prop_name, const std::string& value, bool add_flag = true);
@@ -55,12 +53,8 @@ class xaccount_cmd {
     int32_t list_pop_back(const std::string& prop_name, std::string& value, bool add_flag = true);
     int32_t list_pop_front(const std::string& prop_name, std::string& value, bool add_flag = true);
     int32_t list_clear(const std::string& prop_name, bool add_flag = true);
-    int32_t list_get_back(const std::string& prop_name, std::string & value);
-    int32_t list_get_front(const std::string& prop_name, std::string & value);
     int32_t list_get(const std::string& prop_name, const uint32_t index, std::string & value);
-    int32_t list_empty(const std::string& prop_name, bool& empty);
     int32_t list_size(const std::string& prop_name, int32_t& size);
-    int32_t list_get_range(const std::string &prop_name, int32_t start, int32_t stop, std::vector<std::string> &values);
     int32_t list_get_all(const std::string &prop_name, std::vector<std::string> &values);
     int32_t list_copy_get(const std::string &prop_name, std::deque<std::string> & deque);
 
@@ -69,7 +63,6 @@ class xaccount_cmd {
     int32_t map_set(const std::string & prop_name, const std::string & field, const std::string & value, bool add_flag = true);
     int32_t map_remove(const std::string & prop_name, const std::string & field, bool add_flag = true);
     int32_t map_clear(const std::string & prop_name, bool add_flag = true);
-    int32_t map_empty(const std::string & prop_name, bool& empty);
     int32_t map_size(const std::string & prop_name, int32_t& size);
     int32_t map_copy_get(const std::string & key, std::map<std::string, std::string> & map);
 

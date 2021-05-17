@@ -886,7 +886,7 @@ namespace top
             //then set unit name
             set_unit_name(make_unit_name(std::string(),m_block_height));
             //ask compressed data while serialization
-            set_unit_flag(enum_xdata_flag_acompress);
+            //TODO(jimmy)set_unit_flag(enum_xdata_flag_acompress);
         }
         
         xvbstate_t::xvbstate_t(const xvblock_t& for_block,xvexeunit_t * parent_unit,enum_xdata_type type)
@@ -906,8 +906,8 @@ namespace top
             //then set unit name
             set_unit_name(make_unit_name(get_address(),m_block_height));
             //ask compressed data while serialization
-            set_unit_flag(enum_xdata_flag_acompress);
- 
+            //TODO(jimmy)set_unit_flag(enum_xdata_flag_acompress);
+
             if(parent_unit != NULL)
                 set_parent_unit(parent_unit);
         }
@@ -929,8 +929,8 @@ namespace top
             //then set unit name
             set_unit_name(make_unit_name(get_address(),m_block_height));
             //ask compressed data while serialization
-            set_unit_flag(enum_xdata_flag_acompress);
-            
+            //TODO(jimmy)set_unit_flag(enum_xdata_flag_acompress);
+
             if(parent_unit != NULL)
                 set_parent_unit(parent_unit);
             
@@ -955,8 +955,8 @@ namespace top
             //then set unit name
             set_unit_name(make_unit_name(get_address(),m_block_height));
             //ask compressed data while serialization
-            set_unit_flag(enum_xdata_flag_acompress);
- 
+            //TODO(jimmy)set_unit_flag(enum_xdata_flag_acompress);
+
             if(parent_unit != NULL)
                 set_parent_unit(parent_unit);
         }
@@ -976,8 +976,8 @@ namespace top
             
             set_unit_name(make_unit_name(get_address(),m_block_height)); //set unit name first
             //ask compressed data while serialization
-            set_unit_flag(enum_xdata_flag_acompress);
- 
+            //TODO(jimmy)set_unit_flag(enum_xdata_flag_acompress);
+
             //finally set parent ptr
             set_parent_unit(obj.get_parent_unit());
         }

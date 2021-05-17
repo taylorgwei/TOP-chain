@@ -273,7 +273,6 @@ XDECLARE_ONCHAIN_GOVERNANCE_PARAMETER(application_contract_code_max_len, std::ui
 XDECLARE_ONCHAIN_GOVERNANCE_PARAMETER(contract_call_contracts_num, std::uint32_t, critical, 25, 1, std::numeric_limits<uint32_t>::max());
 
 /* begin of offchain parameters */
-XDECLARE_CONFIGURATION(min_account_deposit, std::uint64_t, ASSET_TOP(0));  // min account activation deposit unnecessary
 XDECLARE_CONFIGURATION(recv_tx_cache_window, std::uint32_t, 30);
 XDECLARE_CONFIGURATION(account_send_queue_tx_max_num, std::uint32_t, 16);
 XDECLARE_CONFIGURATION(config_property_alias_name_max_len, std::uint32_t, 32);

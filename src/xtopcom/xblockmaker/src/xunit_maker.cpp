@@ -106,8 +106,8 @@ void xunit_maker_t::find_highest_send_tx(uint64_t & latest_nonce, uint256_t & la
         latest_nonce = max_tx_nonce;
         latest_hash = tx_hash;
     } else {
-        latest_nonce = get_latest_bstate()->get_account_mstate().get_latest_send_trans_number();
-        latest_hash = get_latest_bstate()->get_account_mstate().get_latest_send_trans_hash();
+        latest_nonce = get_latest_bstate()->get_latest_send_trans_number();
+        latest_hash = get_latest_bstate()->account_send_trans_hash();
     }
 }
 
@@ -126,7 +126,7 @@ bool xunit_maker_t::push_tx(const data::xblock_consensus_para_t & cs_para, const
     }
 
     if (tx->is_confirm_tx()) {
-        auto latest_nonce = get_latest_bstate()->get_account_mstate().get_latest_send_trans_number();
+        auto latest_nonce = get_latest_bstate()->get_latest_send_trans_number();
         if (tx->get_transaction()->get_tx_nonce() > latest_nonce) {
             xwarn("xunit_maker_t::push_tx fail-tx filtered for nonce is overstepped. %s latest_nonce=%llu, tx=%s",
                 cs_para.dump().c_str(), latest_nonce, tx->dump(true).c_str());
@@ -142,8 +142,8 @@ bool xunit_maker_t::push_tx(const data::xblock_consensus_para_t & cs_para, const
         if (tx->get_transaction()->get_last_nonce() != latest_nonce || !tx->get_transaction()->check_last_trans_hash(latest_hash)) {
             xaccount_ptr_t committed_state = get_store()->query_account(get_account());
             if (committed_state != nullptr) {
-                uint64_t account_latest_nonce = committed_state->get_account_mstate().get_latest_send_trans_number();
-                uint256_t account_latest_hash = committed_state->get_account_mstate().get_latest_send_trans_hash();
+                uint64_t account_latest_nonce = committed_state->get_latest_send_trans_number();
+                uint256_t account_latest_hash = committed_state->account_send_trans_hash();
                 get_txpool()->updata_latest_nonce(get_account(), account_latest_nonce, account_latest_hash);
             }
             xwarn("xunit_maker_t::push_tx fail-tx filtered for send nonce hash not match,%s,latest_nonce=%ld,tx=%s",
@@ -208,9 +208,9 @@ xblock_ptr_t xunit_maker_t::make_proposal(const xunitmaker_para_t & unit_para, c
         }
         return nullptr;
     }
-    xinfo("xunit_maker_t::make_proposal succ unit.is_leader=%d,%s,unit=%s,cert=%s,class=%d,unconfirm=%d,prev_confirmed=%d,tx_count=%d,latest_state=%s",
+    xinfo("xunit_maker_t::make_proposal succ unit.is_leader=%d,%s,unit=%s,cert=%s,class=%d,unconfirm=%d,tx_count=%d,latest_state=%s",
         unit_para.m_is_leader, cs_para.dump().c_str(), proposal_block->dump().c_str(), proposal_block->dump_cert().c_str(), proposal_block->get_block_class(),
-        proposal_block->get_unconfirm_sendtx_num(), proposal_block->is_prev_sendtx_confirmed(),
+        proposal_block->get_unconfirm_sendtx_num(), 
         result.m_success_txs.size(), dump().c_str());
     for (auto & tx : result.m_success_txs) {
         xinfo("xunit_maker_t::make_proposal succ tx.is_leader=%d,%s,unit=%s,tx=%s",
@@ -355,7 +355,7 @@ std::string xunit_maker_t::dump() const {
     xprintf(local_param_buf,sizeof(local_param_buf),
         "{highest=%" PRIu64 ",lowest=%" PRIu64 ",state=%" PRIu64 ",nonce=%" PRIu64 ",parent=%" PRIu64 "}",
         highest_height, lowest_height, state_height,
-        get_latest_bstate()->get_account_mstate().get_latest_send_trans_number(),
+        get_latest_bstate()->get_latest_send_trans_number(),
         get_highest_height_block()->get_cert()->get_parent_block_height());
     return std::string(local_param_buf);
 }

@@ -187,7 +187,7 @@ namespace top
         
         const int  xvcanvas_t::decode_from(xstream_t & input_bin,const uint32_t bin_size,std::deque<xvmethod_t> & output_records)
         {
-            if( (input_bin.size() == 0) || (bin_size == 0) || (input_bin.size() < bin_size) )
+            if( (input_bin.size() == 0) || (bin_size == 0) || ((uint32_t)input_bin.size() < bin_size) )
             {
                 xerror("xvcanvas_t::decode_from,invalid stream of size(%d) vs bin_log_size(%u)",(int)input_bin.size(),bin_size);
                 return enum_xerror_code_no_data;

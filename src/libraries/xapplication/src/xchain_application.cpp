@@ -38,7 +38,8 @@ xtop_chain_application::xtop_chain_application(observer_ptr<xapplication_t> cons
         m_network_id,
         m_application->message_bus(),
         std::bind(&xtop_chain_application::on_election_data_updated, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
-        m_application->logic_timer())}
+        m_application->logic_timer(),
+        m_application->store())}
   , m_election_cache_data_accessor{top::make_unique<election::cache::xdata_accessor_t>(network_id, m_application->logic_timer())}
   , m_vhost{std::make_shared<vnetwork::xvhost_t>(application->network_driver(m_network_id),
                                                  application->logic_timer(),

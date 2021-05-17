@@ -8,6 +8,7 @@
 #include "xcommon/xip.h"
 #include "xdata/xelection/xelection_result_store.h"
 #include "xmbus/xbase_sync_event_monitor.hpp"
+#include "xstore/xstore_face.h"
 
 NS_BEG2(top, elect)
 
@@ -18,7 +19,8 @@ public:
     xelect_client_process(common::xnetwork_id_t const & network_id,
                           observer_ptr<mbus::xmessage_bus_face_t> const & mb,
                           elect_update_handler2 cb2,
-                          observer_ptr<time::xchain_time_face_t> const & xchain_timer);
+                          observer_ptr<time::xchain_time_face_t> const & xchain_timer,
+                          observer_ptr<store::xstore_face_t> const & store);
 
 protected:
     bool filter_event(const mbus::xevent_ptr_t & e) override;
@@ -32,5 +34,6 @@ private:
     common::xnetwork_id_t m_network_id;
     elect_update_handler2 m_update_handler2{};
     observer_ptr<time::xchain_time_face_t> m_xchain_timer{nullptr};
+    observer_ptr<store::xstore_face_t> m_store{nullptr};
 };
 NS_END2

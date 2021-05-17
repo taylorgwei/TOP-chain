@@ -269,7 +269,7 @@ std::string xstore_key_t::printable_key() const {
 xstore::xstore(const std::shared_ptr<db::xdb_face_t> &db)
     : m_db(db) {}
 
-xaccount_ptr_t xstore::query_account(const std::string &address) {
+xaccount_ptr_t xstore::query_account(const std::string &address) const {
     auto blockchain = clone_account(address);
     xblockchain_ptr_t obj;
     obj.attach(blockchain);
@@ -277,8 +277,17 @@ xaccount_ptr_t xstore::query_account(const std::string &address) {
 }
 
 xblockchain2_t *xstore::clone_account(const std::string &owner) const {
-    auto obj = get_object(xstore_key_t(xstore_key_type_blockchain, xstore_block_type_none, owner, {}));
-    return dynamic_cast<xblockchain2_t *>(obj);
+    // auto obj = get_object(xstore_key_t(xstore_key_type_blockchain, xstore_block_type_none, owner, {}));
+    // return dynamic_cast<xblockchain2_t *>(obj);
+
+    auto dbkey = xstore_key_t(xstore_key_type_blockchain, xstore_block_type_none, owner, {});
+    std::string value = get_value(dbkey);
+    if (!value.empty()) {
+        xblockchain2_t* account = new xblockchain2_t(owner);
+        account->serialize_from_string(value);
+        return account;
+    }
+    return nullptr;
 }
 std::map<std::string, std::string> xstore::generate_block_object(xblock_t *block) {
     xassert(block != nullptr);
@@ -413,16 +422,6 @@ bool xstore::save_block(const std::string & store_path, data::xblock_t *block) {
     return false;
 }
 
-xdataobj_ptr_t xstore::clone_property(const std::string &address, const std::string &property_name) {
-    xdataobj_ptr_t property = nullptr;
-    xaccount_ptr_t state = query_account(address);
-    if (state != nullptr) {
-        property = state->find_property(property_name);
-    }
-    xdbg("account: %s  property name: %s, has %s property", address.c_str(), property_name.c_str(), property == nullptr ? "empty" : "not empty");
-    return property;
-}
-
 bool xstore::set_transaction_hash(xstore_transaction_t& txn, const uint64_t unit_height, const std::string &txhash, enum_transaction_subtype txtype, xtransaction_t* tx) {
     xstore_key_t db_key(xstore_key_type_transaction, xstore_block_type_none, {}, {}, txhash);
 
@@ -461,19 +460,6 @@ bool xstore::set_transaction_hash(xstore_transaction_t& txn, const uint64_t unit
     return true;
 }
 
-xdataobj_ptr_t xstore::get_property(const std::string &address, const std::string &property_name, int32_t type) {
-    xdataobj_ptr_t obj = clone_property(address, property_name);
-    if (obj == nullptr) {
-        return nullptr;
-    }
-
-    if (obj->get_obj_type() != type) {
-        xwarn("xstore::get_property obj type(%d, %d) not match", obj->get_obj_type(), type);
-        return nullptr;
-    }
-    return obj;
-}
-
 int32_t xstore::string_get(const std::string &address, const std::string &key, std::string &value) const {
     // TODO(jimmy) need optimize account context
     xaccount_context_t context(address, const_cast<xstore *>(this));
@@ -483,44 +469,14 @@ int32_t xstore::string_get(const std::string &address, const std::string &key, s
     return context.string_get(key, value);
 }
 
-int32_t xstore::string_empty(const std::string &address, const std::string &key, bool &empty) {
-    xaccount_context_t context(address, this);
-    return context.string_empty(key, empty);
-}
-
-int32_t xstore::string_size(const std::string &address, const std::string &key, int32_t &size) {
-    xaccount_context_t context(address, this);
-    return context.string_size(key, size);
-}
-
-int32_t xstore::list_get_back(const std::string &address, const std::string &key, std::string &value) {
-    xaccount_context_t context(address, this);
-    return context.list_get_back(key, value);
-}
-
-int32_t xstore::list_get_front(const std::string &address, const std::string &key, std::string &value) {
-    xaccount_context_t context(address, this);
-    return context.list_get_front(key, value);
-}
-
 int32_t xstore::list_get(const std::string &address, const std::string &key, const uint32_t index, std::string &value) {
     xaccount_context_t context(address, this);
     return context.list_get(key, index, value);
 }
 
-int32_t xstore::list_empty(const std::string &address, const std::string &key, bool &empty) {
-    xaccount_context_t context(address, this);
-    return context.list_empty(key, empty);
-}
-
 int32_t xstore::list_size(const std::string &address, const std::string &key, int32_t &size) {
     xaccount_context_t context(address, this);
     return context.list_size(key, size);
-}
-
-int32_t xstore::list_get_range(const std::string &address, const std::string &key, int32_t start, int32_t stop, std::vector<std::string> &values) {
-    xaccount_context_t context(address, this);
-    return context.list_get_range(key, start, stop, values);
 }
 
 int32_t xstore::list_get_all(const std::string &address, const std::string &key, std::vector<std::string> &values) {
@@ -538,18 +494,17 @@ int32_t xstore::map_get(const std::string &address, const std::string &key, cons
     return context.map_get(key, field, value);
 }
 
-int32_t xstore::map_empty(const std::string &address, const std::string &key, bool &empty) {
-    xaccount_context_t context(address, this);
-    return context.map_empty(key, empty);
-}
-
 int32_t xstore::map_size(const std::string &address, const std::string &key, int32_t &size) {
     xaccount_context_t context(address, this);
     return context.map_size(key, size);
 }
 
 int32_t xstore::map_copy_get(const std::string &address, const std::string &key, std::map<std::string, std::string> &map) const {
-    xaccount_context_t context(address, const_cast<xstore *>(this));
+    xaccount_ptr_t account = query_account(address);
+    if (nullptr == account) {
+        return -1;
+    }
+    xaccount_context_t context(account.get(), const_cast<xstore *>(this));
     return context.map_copy_get(key, map);
 }
 
@@ -663,60 +618,32 @@ bool xstore::execute_tableblock_full(xblockchain2_t* account, xfull_tableblock_t
 }
 
 int32_t xstore::get_map_property(const std::string &address, uint64_t height, const std::string &name, std::map<std::string, std::string> &value) {
-    xdataobj_ptr_t target;
-    int32_t        ret = get_property(address, height, name, target);
-
-    if (ret != xsuccess) {
-        return ret;
+    xaccount_ptr_t account = get_target_state(address, height);
+    if (nullptr == account) {
+        return -1;
     }
 
-    xstrmap_ptr_t obj = dynamic_xobject_ptr_cast<base::xstrmap_t>(target);
-    if (obj != nullptr) {
-        value = obj->get_map();
-    }
-
-    return xsuccess;
-}
-
-int32_t xstore::get_list_property(const std::string &address, uint64_t height, const std::string &name, std::vector<std::string> &value) {
-    xdataobj_ptr_t target;
-    int32_t        ret = get_property(address, height, name, target);
-
-    if (ret != xsuccess) {
-        return ret;
-    }
-
-    value.clear();
-    xstrdeque_ptr_t obj = dynamic_xobject_ptr_cast<base::xstrdeque_t>(target);
-    if (obj != nullptr) {
-        int32_t size = obj->size();
-        for (int32_t i = 0; i < size; i++) {
-            std::string v;
-            auto        ret = obj->get(i, v);
-            assert(ret);
-            value.push_back(v);
-        }
+    bool ret = account->map_get(name, value);
+    if (!ret) {
+        return -1;
     }
     return xsuccess;
 }
 
 int32_t xstore::get_string_property(const std::string &address, uint64_t height, const std::string &name, std::string &value) {
-    xdataobj_ptr_t target;
-    int32_t        ret = get_property(address, height, name, target);
-    if (ret != xsuccess) {
-        return ret;
+    xaccount_ptr_t account = get_target_state(address, height);
+    if (nullptr == account) {
+        return -1;
     }
-
-    xstring_ptr_t obj = dynamic_xobject_ptr_cast<base::xstring_t>(target);
-    if (obj != nullptr) {
-        value = obj->get();
+    bool ret = account->string_get(name, value);
+    if (!ret) {
+        return -1;
     }
     return xsuccess;
 }
 
-bool xstore::load_blocks_from_full_or_state(const xaccount_ptr_t & state, const xblock_ptr_t & latest_block, std::map<uint64_t, xblock_ptr_t> & blocks) {
-    if (state->get_last_height() == latest_block->get_height()) {
-        xassert(state->get_last_block_hash() == latest_block->get_block_hash() || latest_block->is_genesis_block());
+bool xstore::load_blocks_from_full_or_state(const xaccount_ptr_t & state, const xblock_ptr_t & latest_block, std::map<uint64_t, xblock_ptr_t> & blocks) const {
+    if (state->get_last_height() == latest_block->get_height() && state->get_last_block_hash() == latest_block->get_block_hash()) {
         return true;
     }
 
@@ -745,50 +672,78 @@ bool xstore::load_blocks_from_full_or_state(const xaccount_ptr_t & state, const 
     return true;
 }
 
-// system contract start with 0, user account start with 1
-int32_t xstore::get_property(const std::string &address, uint64_t height, const std::string &name, xdataobj_ptr_t &obj) {
-    xdbg("xstore::get_property_by_height enter.account=%s,key=%s,height=%ld", address.c_str(), name.c_str(), height);
-    base::xvaccount_t _vaddr(address);
-    base::xauto_ptr<base::xvblock_t> _block = base::xvchain_t::instance().get_xblockstore()->load_block_object(_vaddr, height, base::enum_xvblock_flag_committed, true);
-    if (_block == nullptr) {
-        xwarn("xstore::get_property_by_height load block fail.account=%s,key=%s,height=%ld", address.c_str(), name.c_str(), height);
-        return -1;
+xaccount_ptr_t xstore::get_target_state(base::xvblock_t* block) const {
+    if (block == nullptr) {
+        xerror("xstore::get_target_state block is null");
+        return nullptr;
     }
-    xblock_ptr_t latest_block = xblock_t::raw_vblock_to_object_ptr(_block.get());
-
+    const std::string & address = block->get_account();
+    base::xvaccount_t _vaddr(address);
+    uint64_t target_height = block->get_height();
     xaccount_ptr_t current_state = query_account(address);
-    if (current_state->get_last_height() == height) {
-        if (current_state->get_last_block_hash() != latest_block->get_block_hash()) {
+    if (current_state == nullptr) {
+        // genesis block must has been executed
+        xwarn("xstore::get_target_state query account fail. block=%s", block->dump().c_str());
+        return nullptr;
+    }
+    xassert(!current_state->get_last_block_hash().empty());
+
+    xdbg("xstore::get_target_state after load. state:height=%ld,hash=%s,block:height=%ld,hash=%s",
+        current_state->get_last_height(), base::xstring_utl::to_hex(current_state->get_last_block_hash()).c_str(),
+        block->get_height(),  base::xstring_utl::to_hex(block->get_block_hash()).c_str());
+    if (current_state->get_last_height() == target_height) {
+        if (current_state->get_last_block_hash() != block->get_block_hash()) {
+            xassert(false);
             current_state = make_object_ptr<xblockchain2_t>(address);  // reset state to genesis
+        } else {
+            return current_state;
         }
-    } else if (current_state->get_last_height() > height) {
+    } else if (current_state->get_last_height() > target_height) {
         current_state = make_object_ptr<xblockchain2_t>(address);  // reset state to genesis
     }
 
+    xblock_ptr_t latest_block = xblock_t::raw_vblock_to_object_ptr(block);
     std::map<uint64_t, xblock_ptr_t> blocks;
     if (false == load_blocks_from_full_or_state(current_state, latest_block, blocks)) {
-        xwarn("xstore::get_property_by_height load block fail.account=%s,key=%s,height=%ld", address.c_str(), name.c_str(), height);
-        return -1;
+        xwarn("xstore::get_target_state load block fail.block=%s", block->dump().c_str());
+        return nullptr;
     }
 
     for (auto & v : blocks) {
-        auto & block = v.second;
-        if (false == current_state->apply_block(block.get())) {
-            xwarn("xstore::get_property_by_height fail apply block.account=%s,key=%s,state_height=%ld,block_height=%ld",
-                address.c_str(), name.c_str(), current_state->get_last_height(), height);
-            return -1;
+        auto & _block = v.second;
+        if (false == current_state->apply_block(_block.get())) {
+            xerror("xstore::get_target_state fail apply block.block=%s", _block->dump().c_str());
+            return nullptr;
         }
     }
 
-    obj = current_state->find_property(name);
-    if (obj == nullptr) {
-        xwarn("xstore::get_property_by_height fail apply block.account=%s,key=%s,tate_height=%ld,block_height=%ld",
-            address.c_str(), name.c_str(), current_state->get_last_height(), height);
-        return xaccount_property_not_exist;
+    xassert(current_state->get_last_height() == target_height && current_state->get_last_block_hash() == block->get_block_hash());
+    return current_state;
+}
+
+bool xstore::string_property_get(base::xvblock_t* block, const std::string& prop, std::string& value) const {
+    xaccount_ptr_t state = get_target_state(block);
+    if (state == nullptr) {
+        xwarn("xstore::string_property_get get target state fail.block=%s,prop=%s", block->dump().c_str(), prop.c_str());
+        return false;
     }
-    xdbg("xstore::get_property_by_height succ.account=%s,key=%s,tate_height=%ld,block_height=%ld,blocks_size=%zu",
-        address.c_str(), name.c_str(), current_state->get_last_height(), height, blocks.size());
-    return xsuccess;
+    return state->string_get(prop, value);
+}
+
+xaccount_ptr_t xstore::get_target_state(const std::string &address, uint64_t height) const {
+    base::xvaccount_t _vaddr(address);
+    base::xauto_ptr<base::xvblock_t> _block = base::xvchain_t::instance().get_xblockstore()->load_block_object(_vaddr, height, base::enum_xvblock_flag_committed, true);
+    if (_block == nullptr) {
+        xwarn("xstore::get_target_state load block fail.account=%s,height=%ld", address.c_str(), height);
+        return nullptr;
+    }
+
+    xaccount_ptr_t current_state = get_target_state(_block.get());
+    if (current_state == nullptr) {
+        xwarn("xstore::get_target_state get target state fail.account=%s,height=%ld", address.c_str(), height);
+        return nullptr;
+    }
+    return current_state;
 }
 
 bool xstore::set_object(const xstore_key_t &key, const std::string &value, const std::string &detail_info) {
@@ -807,11 +762,15 @@ std::pair<std::string, std::string> xstore::generate_db_object(const xstore_key_
     xassert(object != nullptr);
     xassert(key.type < xstore_key_type_max);
 
-    base::xstream_t stream(base::xcontext_t::instance());
-    auto ret = object->full_serialize_to(stream);
-    assert(0 != ret);
+    // base::xstream_t stream(base::xcontext_t::instance());
+    // auto ret = object->full_serialize_to(stream);
+    // assert(0 != ret);
 
-    return std::make_pair(key.to_db_key(), std::string((const char *)stream.data(), stream.size()));
+    // return std::make_pair(key.to_db_key(), std::string((const char *)stream.data(), stream.size()));
+
+    std::string binstr;
+    object->serialize_to_string(binstr);
+    return std::make_pair(key.to_db_key(), binstr);
 }
 
 bool xstore::set_object(const xstore_key_t &key, base::xdataobj_t *value, const std::string &detail_info) {
@@ -1134,8 +1093,12 @@ bool  xstore::execute_block(base::xvblock_t* vblock) {
         return false;
     }
 
+    xassert(account->get_last_height() == block->get_height() && account->get_last_block_hash() == block->get_block_hash());
+
     xstore_key_t blockchain_key(xstore_key_t(xstore_key_type_blockchain, xstore_block_type_none, account->get_account(), {}));
-    auto blockchain_pair = generate_db_object(blockchain_key, account);
+    std::string account_binstr;
+    account->serialize_to_string(account_binstr);
+    auto blockchain_pair = std::make_pair(blockchain_key.to_db_key(), account_binstr);
     kv_pairs.emplace(blockchain_pair);
 
     bool success;

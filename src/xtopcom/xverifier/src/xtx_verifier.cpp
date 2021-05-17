@@ -212,11 +212,7 @@ int32_t xtx_verifier::verify_tx_duration_expiration(const data::xtransaction_t *
 }
 
 int32_t xtx_verifier::verify_account_min_deposit(uint64_t amount) {
-    auto account_min_deposit = XGET_CONFIG(min_account_deposit);
-    if (amount < account_min_deposit) {
-        xwarn("[global_trace][xtx_verifier][verify_account_min_deposit][fail], trx min deposit:%d, amount:%ld", account_min_deposit, amount);
-        return xverifier_error_account_min_deposit_invalid;
-    }
+    // no need check account min deposit
     return xverifier_error::xverifier_success;
 }
 

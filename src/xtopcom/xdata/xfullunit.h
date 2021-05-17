@@ -37,7 +37,7 @@ class xfullunit_input_t : public xventity_face_t<xfullunit_input_t, xdata_type_f
 class xfullunit_output_t : public xventity_face_t<xfullunit_output_t, xdata_type_fullunit_output_entity> {
  public:
     xfullunit_output_t() = default;
-    explicit xfullunit_output_t(const xaccount_mstate2 & state, const std::map<std::string, std::string> & propertys);
+    explicit xfullunit_output_t(const std::string & property_snapshot);
  protected:
     virtual ~xfullunit_output_t() {}
 
@@ -46,18 +46,14 @@ class xfullunit_output_t : public xventity_face_t<xfullunit_output_t, xdata_type
  public:
     virtual const std::string query_value(const std::string & key) override {return std::string();}//virtual key-value for entity
  public:
-    const xaccount_mstate2 &    get_mstate() const {return m_account_state;}
-    const xaccount_mstate2*     get_mstate_ptr() const {return &m_account_state;}
-    const std::map<std::string, std::string> * get_propertys() const {return &m_account_propertys;}
+    const std::string &         get_property_snapshot() const {return m_property_snapshot;}
 
  private:
-    xaccount_mstate2                    m_account_state{};
-    std::map<std::string, std::string>  m_account_propertys;
+    std::string                         m_property_snapshot;
 };
 
 struct xfullunit_block_para_t {
-    xaccount_mstate2                    m_account_state;
-    std::map<std::string, std::string>  m_account_propertys;
+    std::string                         m_property_snapshot;
     uint64_t                            m_first_unit_height{0};
     std::string                         m_first_unit_hash;
 };
@@ -96,11 +92,7 @@ class xfullunit_block_t : public xblock_t {
     xfullunit_output_t*    get_fullunit_output() const {return (xfullunit_output_t*)(get_output()->get_entitys()[0]);}
 
  public:
-    const std::map<std::string, std::string> & get_property_hash_map() const override {return get_fullunit_output()->get_mstate().get_propertys_hash();}
-    std::string get_property_hash(const std::string & prop_name) const override {return get_fullunit_output()->get_mstate().get_property_hash(prop_name);}
-    const xnative_property_t & get_native_property() const override {return get_fullunit_output()->get_mstate().get_native_property();}
-    const xaccount_mstate2*    get_fullunit_mstate() const override { return get_fullunit_output()->get_mstate_ptr();}
-    const std::map<std::string, std::string> * get_fullunit_propertys() const override {return get_fullunit_output()->get_propertys();}
+    std::string     get_property_snapshot() const {return get_fullunit_output()->get_property_snapshot();}
 };
 
 

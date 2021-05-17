@@ -11,7 +11,6 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Darwin")
         xtxpool_v2
         xtxexecutor
         xblockstore
-        xcontract_runtime
         xstore
         xindexstore
         xverifier
@@ -26,7 +25,6 @@ ELSE()
         xtxpool_v2
         xtxexecutor
         xblockstore
-        xcontract_runtime
         xstore
         xindexstore
         xverifier
