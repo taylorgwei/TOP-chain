@@ -136,7 +136,6 @@ class xaccount_context_t {
     base::xauto_ptr<base::xvintvar_t<uint64_t>> load_uin64_for_write(base::xvbstate_t* bstate, const std::string & key);
     int32_t     uint64_add(const std::string& key, uint64_t change);
     int32_t     uint64_sub(const std::string& key, uint64_t change);
-    int32_t     uint64_set(const std::string& key, uint64_t value);
 
     int32_t create_transfer_tx(const std::string & receiver, uint64_t amount);
     int32_t generate_tx(const std::string& target_addr, const std::string& func_name, const std::string& func_param);
