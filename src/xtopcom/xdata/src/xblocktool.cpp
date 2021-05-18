@@ -43,18 +43,20 @@ base::xvblock_t*   xblocktool_t::create_genesis_lightunit(const std::string & ac
     tx->set_len();
 
     xtransaction_result_t result;
-    if (top_balance > 0) {
-        xobject_ptr_t<base::xvbstate_t> bstate = make_object_ptr<base::xvbstate_t>(account, (uint64_t)0, (uint64_t)0, std::string(), std::string(), (uint64_t)0, (uint32_t)0, (uint16_t)0);
-        xobject_ptr_t<base::xvcanvas_t> canvas = make_object_ptr<base::xvcanvas_t>();
-        {
-            auto propobj = bstate->new_token_var(XPROPERTY_BALANCE_AVAILABLE, canvas.get());
-            auto balance = propobj->deposit(base::vtoken_t(top_balance), canvas.get());
-            xassert(balance == top_balance);
-            std::string property_binlog;
-            canvas->encode(property_binlog);
-            result.m_property_binlog = property_binlog;
-        }
+    xobject_ptr_t<base::xvbstate_t> bstate = make_object_ptr<base::xvbstate_t>(account, (uint64_t)0, (uint64_t)0, std::string(), std::string(), (uint64_t)0, (uint32_t)0, (uint16_t)0);
+    xobject_ptr_t<base::xvcanvas_t> canvas = make_object_ptr<base::xvcanvas_t>();
+    {
+        auto propobj = bstate->new_uint64_var(XPROPERTY_ACCOUNT_CREATE_TIME, canvas.get());
+        propobj->set(base::TOP_BEGIN_GMTIME, canvas.get());
     }
+    if (top_balance > 0) {
+        auto propobj = bstate->new_token_var(XPROPERTY_BALANCE_AVAILABLE, canvas.get());
+        auto balance = propobj->deposit(base::vtoken_t(top_balance), canvas.get());
+        xassert(balance == top_balance);
+    }
+    std::string property_binlog;
+    canvas->encode(property_binlog);
+    result.m_property_binlog = property_binlog;
 
     return xlightunit_block_t::create_genesis_lightunit(account, tx, result);
 }

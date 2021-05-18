@@ -27,17 +27,17 @@ namespace data {
 
 REG_CLS(xblockchain2_t);
 
-xblockchain2_t::xblockchain2_t(uint32_t chainid, const std::string & account, base::enum_xvblock_level level) : m_account(account), m_block_level(level) {
+xblockchain2_t::xblockchain2_t(uint32_t chainid, const std::string & account, base::enum_xvblock_level level) {
     m_bstate = make_object_ptr<base::xvbstate_t>(account, (uint64_t)0, (uint64_t)0, std::string(), std::string(), (uint64_t)0, (uint32_t)0, (uint16_t)0);
     add_modified_count();
 }
 
-xblockchain2_t::xblockchain2_t(const std::string & account, base::enum_xvblock_level level) : m_account(account), m_block_level(level) {
+xblockchain2_t::xblockchain2_t(const std::string & account, base::enum_xvblock_level level) {
     m_bstate = make_object_ptr<base::xvbstate_t>(account, (uint64_t)0, (uint64_t)0, std::string(), std::string(), (uint64_t)0, (uint32_t)0, (uint16_t)0);
     add_modified_count();
 }
 
-xblockchain2_t::xblockchain2_t(const std::string & account) : m_account(account), m_block_level(base::enum_xvblock_level_unit) {
+xblockchain2_t::xblockchain2_t(const std::string & account) {
     m_bstate = make_object_ptr<base::xvbstate_t>(account, (uint64_t)0, (uint64_t)0, std::string(), std::string(), (uint64_t)0, (uint32_t)0, (uint16_t)0);
     add_modified_count();
 }
@@ -46,46 +46,29 @@ xblockchain2_t::xblockchain2_t() {}
 
 int32_t xblockchain2_t::do_write(base::xstream_t & stream) {
     KEEP_SIZE();
-    SERIALIZE_FIELD_BT(m_version);
-    SERIALIZE_FIELD_BT(m_account);
-    SERIALIZE_FIELD_BT(m_block_level);
     SERIALIZE_FIELD_BT(m_last_state_block_height);
     SERIALIZE_FIELD_BT(m_last_state_block_hash);
-    SERIALIZE_FIELD_BT(m_property_confirm_height);
     SERIALIZE_FIELD_BT(m_last_full_block_height);
     SERIALIZE_FIELD_BT(m_last_full_block_hash);
     SERIALIZE_FIELD_BT(m_ext);
-    SERIALIZE_FIELD_BT(m_create_time);
 
     std::string bstate_bin;
     m_bstate->serialize_to_string(bstate_bin);
     stream << bstate_bin;
-    xdbg("jimmy xblockchain2_t::do_write account=%s,height=%ld,hash=%s,bstate_size=%zu,bstate_hash=%ld",
-        m_account.c_str(), m_last_state_block_height, base::xstring_utl::to_hex(m_last_state_block_hash).c_str(), bstate_bin.size(), base::xhash64_t::digest(bstate_bin));
-
-    xobject_ptr_t<base::xvbstate_t> bstate2 = make_object_ptr<base::xvbstate_t>(m_account, (uint64_t)0, (uint64_t)0, std::string(), std::string(), (uint64_t)0, (uint32_t)0, (uint16_t)0);
-    bstate2->serialize_from_string(bstate_bin);
 
     return CALC_LEN();
 }
 
 int32_t xblockchain2_t::do_read(base::xstream_t & stream) {
     KEEP_SIZE();
-    DESERIALIZE_FIELD_BT(m_version);
-    DESERIALIZE_FIELD_BT(m_account);
-    DESERIALIZE_FIELD_BT(m_block_level);
     DESERIALIZE_FIELD_BT(m_last_state_block_height);
     DESERIALIZE_FIELD_BT(m_last_state_block_hash);
-    DESERIALIZE_FIELD_BT(m_property_confirm_height);
     DESERIALIZE_FIELD_BT(m_last_full_block_height);
     DESERIALIZE_FIELD_BT(m_last_full_block_hash);
     DESERIALIZE_FIELD_BT(m_ext);
-    DESERIALIZE_FIELD_BT(m_create_time);
 
     std::string bstate_bin;
     stream >> bstate_bin;
-    xdbg("jimmy xblockchain2_t::do_read account=%s,height=%ld,hash=%s,bstate_size=%zu,bstate_hash=%ld",
-        m_account.c_str(), m_last_state_block_height, base::xstring_utl::to_hex(m_last_state_block_hash).c_str(), bstate_bin.size(), base::xhash64_t::digest(bstate_bin));
     m_bstate->serialize_from_string(bstate_bin);
 
     return CALC_LEN();
@@ -141,12 +124,9 @@ bool xblockchain2_t::add_light_unit(const xblock_t * block) {
     }
 
     std::string binlog = unit->get_property_binlog();
+    m_bstate->apply_changes_of_binlog(binlog);
     xdbg("xblockchain2_t::add_light_unit apply_changes_of_binlog account=%s,height=%ld,binlog_size=%zu",
         block->get_account().c_str(), block->get_height(), binlog.size());
-    if (!binlog.empty()) {
-        bool ret = m_bstate->apply_changes_of_binlog(binlog);
-        xassert(ret);
-    }
     return true;
 }
 
@@ -157,9 +137,10 @@ bool xblockchain2_t::add_full_unit(const xblock_t * block) {
     }
 
     std::string snapshot = fullunit->get_property_snapshot();
-    m_bstate = make_object_ptr<base::xvbstate_t>(*block);
     m_bstate->serialize_from_string(snapshot);  // TODO(jimmy)
 
+    xdbg("xblockchain2_t::add_full_unit account=%s,height=%ld,snapshot_size=%zu",
+        block->get_account().c_str(), block->get_height(), snapshot.size());
     m_last_full_block_height = block->get_height();
     m_last_full_block_hash = block->get_block_hash();
     return true;
@@ -205,16 +186,17 @@ xobject_ptr_t<xblockchain2_t> xblockchain2_t::clone_state() {
 }
 
 bool xblockchain2_t::apply_block(const xblock_t* block) {
-    xdbg("jimmybstate xblockchain2_t::apply_block block=%s", block->dump().c_str());
-    bool ret = true;
     if (block == nullptr) {
         xerror("xblockchain2_t::apply_block block is null");
     }
 
     if (block->is_genesis_block()) {
         m_bstate = make_object_ptr<base::xvbstate_t>(*block);
+    } else {
+        //m_bstate = make_object_ptr<base::xvbstate_t>(*block, *(m_bstate.get()));
     }
 
+    bool ret = true;
     if (block->is_lightunit()) {
         ret = add_light_unit(block);
     } else if (block->is_fullunit()) {
@@ -227,10 +209,10 @@ bool xblockchain2_t::apply_block(const xblock_t* block) {
 
     update_block_height_hash_info(block);
 
-    if ( (block->get_block_level() == base::enum_xvblock_level_unit)
-        && (block->is_genesis_block() || block->get_height() == 1) ) {
-        update_account_create_time(block);
-    }
+    xdbg_info("xblockchain2_t::apply_block account=%s,height=%ld,create_time=%ld,sendtx_num=%ld,recvtx_num=%ld,unconfirmtx_num=%d",
+        get_account().c_str(), block->get_height(), get_account_create_time(), account_send_trans_number(),
+        account_recv_trans_number(), get_unconfirm_sendtx_num());
+
     add_modified_count();
     return true;
 }
@@ -241,30 +223,6 @@ void xblockchain2_t::update_block_height_hash_info(const xblock_t * block) {
     if (block->is_genesis_block() || block->is_fullblock()) {
         m_last_full_block_height = block->get_height();
         m_last_full_block_hash = block->get_block_hash();
-    }
-}
-
-void xblockchain2_t::update_account_create_time(const xblock_t * block) {
-    if (block->get_block_level() != base::enum_xvblock_level_unit) {
-        xassert(false);
-        return;
-    }
-
-    if (block->is_genesis_block()) {
-        // if the genesis block is not the nil block, it must be a "genesis account".
-        // the create time of genesis account should be set to the gmtime of genesis block
-        if (!get_account_create_time() && block->get_header()->get_block_class() != base::enum_xvblock_class_nil) {
-            set_account_create_time(block->get_cert()->get_gmtime());
-            xdbg("xblockchain2_t::update_account_create_time,address:%s account_create_time:%ld", block->get_account().c_str(), get_account_create_time());
-        }
-    } else if (block->get_height() == 1) {
-        // the create time of non-genesis account should be set to the gmtime of height#1 block
-        if (!get_account_create_time()) {
-            set_account_create_time(block->get_cert()->get_gmtime());
-            xdbg("xblockchain2_t::update_account_create_time,address:%s account_create_time:%ld", block->get_account().c_str(), get_account_create_time());
-        }
-    } else {
-        xassert(false);
     }
 }
 
@@ -307,7 +265,7 @@ uint64_t xblockchain2_t::get_total_tgas(uint32_t token_price) const {
     uint64_t total_tgas = pledge_token * token_price / TOP_UNIT + get_free_tgas();
     uint64_t max_tgas;
     // contract account, max tgas is different
-    if (is_user_contract_address(common::xaccount_address_t{m_account})) {
+    if (is_user_contract_address(common::xaccount_address_t{get_account()})) {
         max_tgas = XGET_ONCHAIN_GOVERNANCE_PARAMETER(max_gas_contract);
     } else {
         max_tgas = XGET_ONCHAIN_GOVERNANCE_PARAMETER(max_gas_account);

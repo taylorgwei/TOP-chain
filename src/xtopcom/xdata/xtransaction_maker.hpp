@@ -18,7 +18,7 @@ class xtransaction_maker {
         data::xproperty_asset asset(amount);
         tx->make_tx_transfer(asset);
         tx->set_last_trans_hash_and_nonce(account->account_send_trans_hash(), account->account_send_trans_number());
-        tx->set_different_source_target_address(account->address(), to);
+        tx->set_different_source_target_address(account->get_account(), to);
         tx->set_fire_timestamp(firestamp);
         tx->set_expire_duration(duration);
         tx->set_deposit(deposit);
@@ -38,7 +38,7 @@ class xtransaction_maker {
         data::xproperty_asset asset(amount);
         tx->make_tx_run_contract(asset, func_name, func_param);
         tx->set_last_trans_hash_and_nonce(account->account_send_trans_hash(), account->account_send_trans_number());
-        tx->set_different_source_target_address(account->address(), to);
+        tx->set_different_source_target_address(account->get_account(), to);
         tx->set_fire_timestamp(firestamp);
         tx->set_expire_duration(duration);
         tx->set_deposit(deposit);

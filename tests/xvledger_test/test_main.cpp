@@ -3,6 +3,8 @@
 #include "xbase/xlog.h"
 #include "xbase/xhash.h"
 #include "xbase/xutl.h"
+#include "xvledger/xvblock.h"
+#include "xdata/xrootblock.h"
 
 using namespace std;
 using namespace top;
@@ -31,6 +33,11 @@ int main(int argc, char **argv) {
     new xhashtest_t();
 
     testing::InitGoogleTest(&argc, argv);
+
+    data::xrootblock_para_t para;
+    data::xrootblock_t::init(para);
+
+    base::xvblock_t::register_object(base::xcontext_t::instance());
 
     xinit_log("./xindexstore_test.log", true, true);
     xset_log_level(enum_xlog_level_debug);
