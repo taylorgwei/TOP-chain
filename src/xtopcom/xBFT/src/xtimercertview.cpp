@@ -162,6 +162,33 @@ bool xconspacemaker_t::on_pdu_event_down(const base::xvevent_t & event, xcsobjec
         _evt_obj->set_cookie(m_latest_cert->get_clock());  // carry latest viewid
     }
 
+    const std::string & latest_xclock_cert_bin = _evt_obj->_packet.get_xclock_cert();
+    if(latest_xclock_cert_bin.empty() == false) //try to update clock cert
+    {
+        base::xauto_ptr<base::xvqcert_t> _clock_cert_obj(base::xvblock_t::create_qcert_object(latest_xclock_cert_bin));
+        if(_clock_cert_obj)
+        {
+            //note:#1 safe rule, always cleans up flags carried by peer
+            _clock_cert_obj->reset_block_flags(); //force remove
+            if(_clock_cert_obj->is_deliver())
+                _evt_obj->set_xclock_cert(_clock_cert_obj.get());
+            else
+                xwarn_err("xconspacemaker_t::on_pdu_event_down,fail-carry a bad clock cert for packet=%s,at node=0x%llx",packet.dump().c_str(),get_xip2_low_addr());
+        }
+        else
+        {
+            xwarn_err("xconspacemaker_t::on_pdu_event_down,fail-carry a unrecognized clock cert for packet=%s,at node=0x%llx",packet.dump().c_str(),get_xip2_low_addr()); //possible attack
+        }
+    }
+    if(_evt_obj->_packet.get_msg_type() == enum_consensus_msg_type_proposal)
+    {
+        if(_evt_obj->get_xclock_cert() == NULL) //proposal now force to carry the bind clock cert
+        {
+            xerror("xconspacemaker_t::on_pdu_event_down,fail-carry a unrecognized clock cert for proposal msg from packet=%s,at node=0x%llx",packet.dump().c_str(),get_xip2_low_addr()); //possible attack
+            return true;
+        }
+    }
+
     switch (packet.get_msg_type()) {
     // timeout / sync / resp belong to pacemaker
     case enum_consensus_msg_type_timeout:
@@ -480,7 +507,7 @@ bool xconspacemaker_t::on_create_block_event(const base::xvevent_t & event,xcsob
 }
 
 bool xconspacemaker_t::on_proposal_start(const base::xvevent_t & event, xcsobject_t * from_parent, const int32_t cur_thread_id, const uint64_t timenow_ms) {
-    
+
     xproposal_start * _evt_obj = (xproposal_start *)&event;
     if( (_evt_obj->get_clock_cert() == NULL) && (m_latest_cert != NULL) )
     {
