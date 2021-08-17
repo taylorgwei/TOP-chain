@@ -341,7 +341,7 @@ bool xproposal_maker_t::update_txpool_txs(const xblock_consensus_para_t & propos
 
     // get table batch txs for execute and make block
     auto & tablestate_highqc = table_para.get_tablestate();
-    uint16_t all_txs_max_num = 200;  // TODO(jimmy) config paras
+    uint16_t all_txs_max_num = 100;  // TODO(jimmy) config paras
     uint16_t confirm_and_recv_txs_max_num = 190;
     uint16_t confirm_txs_max_num = 180;
     xtxpool_v2::xtxs_pack_para_t txpool_pack_para(proposal_para.get_table_account(), tablestate_highqc->get_receiptid_state(), locked_nonce_map, all_txs_max_num, confirm_and_recv_txs_max_num, confirm_txs_max_num);
