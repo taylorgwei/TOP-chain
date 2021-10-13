@@ -1402,6 +1402,16 @@ namespace top
             
             return register_plugin(new_mgr,enum_xvchain_plugin_recycle_mgr);
         }
+
+        bool xvchain_t::set_node_type(top::common::xnode_type_t type)
+        {
+            m_node_type = type;
+            return true;
+        }
+        top::common::xnode_type_t xvchain_t::get_node_type()
+        {
+            return m_node_type;
+        }
     
     };//end of namespace of base
 };//end of namespace of top

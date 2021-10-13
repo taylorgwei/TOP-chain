@@ -14,6 +14,7 @@
 #include "xvtxstore.h"
 #include "xveventbus.h"
 #include "xvdrecycle.h"
+#include "xcommon/xnode_type.h"
 
 namespace top
 {
@@ -340,8 +341,8 @@ namespace top
                 enum_xvchain_plugin_txs_store     = 0x04, //manage all transactions
                 enum_xvchain_plugin_event_mbus    = 0x05, //manage mbus
                 enum_xvchain_plugin_recycle_mgr   = 0x06, //manage xvdrecycle
- 
-                enum_xvchain_plugin_type_max      = 0x07, //max value,DONT over it
+                enum_xvchain_plugin_node_type     = 0x07,
+                enum_xvchain_plugin_type_max      = 0x08, //max value,DONT over it
             };
         public:
             static xvchain_t &  instance(const uint16_t chain_id = 0);
@@ -375,7 +376,7 @@ namespace top
             xveventbus_t*               get_xevmbus(); //global mbus object
             xvdrecycle_mgr*             get_xrecyclemgr(); //global recycler manager
             xvdrecycle_t*               get_xrecycler(enum_vdata_recycle_type type);//quick path
-            
+            top::common::xnode_type_t   get_node_type();
         public:
             bool                        set_xdbstore(xvdbstore_t * new_store);//set global shared instance
             bool                        set_xtxstore(xvtxstore_t * new_store);
@@ -383,6 +384,7 @@ namespace top
             bool                        set_xstatestore(xvstatestore_t* new_sotre);
             bool                        set_xcontractstore(xvcontractstore_t * new_store);
             bool                        set_xevmbus(xveventbus_t * new_mbus);
+            bool                        set_node_type(top::common::xnode_type_t type);
             
             //param of force_clean indicate whether force to close valid account
             virtual bool                clean_all(bool force_clean = false);//just do clean but not never destory objects of ledger/book/table
@@ -397,6 +399,7 @@ namespace top
             uint32_t                m_chain_id;//aka network_id
             uint32_t                m_current_node_roles;//multiple roles
             uint32_t                m_current_process_id;
+            common::xnode_type_t    m_node_type;
         protected:
             xvledger_t*   m_ledgers[enum_vchain_has_buckets_count];
         private:

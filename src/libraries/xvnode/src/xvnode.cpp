@@ -186,6 +186,8 @@ void xtop_vnode::new_driver_added() {
     update_rpc_service();
     update_contract_manager(false);
     update_block_prune();
+    base::xvchain_t::instance().set_node_type(m_the_binding_driver->type());
+    xdbg("set node type:%s", common::to_string(m_the_binding_driver->type()).c_str());
 }
 
 void xtop_vnode::driver_removed() {
