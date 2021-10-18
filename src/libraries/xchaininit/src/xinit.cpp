@@ -128,6 +128,10 @@ int topchain_init(const std::string& config_file, const std::string& config_extr
     std::cout << "=== xtopchain start here ===" << std::endl;
     std::cout << "=== xbase info:" << xbase_info << " ===" << std::endl;
 
+    base::xvchain_t::instance().set_auto_prune_data(XGET_CONFIG(auto_prune_data));
+    base::xvchain_t::instance().set_start_time(base::xvchain_t::instance().get_time_now());
+    xdbg("get_auto_prune_data: %d", base::xvchain_t::instance().get_auto_prune_data());
+
     MEMCHECK_INIT();
     if (false == create_rootblock(config_file)) {
         return 1;
@@ -345,7 +349,6 @@ int topchain_noparams_init(const std::string& pub_key, const std::string& pri_ke
 
     XMETRICS_INIT();
 
-
     std::cout << "xnode config initializing..."  << std::endl;
     xinfo("xnode config initializing...") ;
     auto& config_center = top::config::xconfig_register_t::get_instance();
@@ -414,6 +417,11 @@ int topchain_noparams_init(const std::string& pub_key, const std::string& pri_ke
     xset_log_level((enum_xlog_level)log_level);
     xinfo("=== xtopchain start here with noparams ===");
     std::cout << "xnode start begin..." << std::endl;
+
+    base::xvchain_t::instance().set_auto_prune_data(XGET_CONFIG(auto_prune_data));
+    base::xvchain_t::instance().set_datadir_path(datadir);
+    base::xvchain_t::instance().set_start_time(base::xvchain_t::instance().get_time_now());
+    xdbg("get_auto_prune_data: %d", base::xvchain_t::instance().get_auto_prune_data());
 
     // load bwlist
     std::map<std::string, std::string> bwlist;

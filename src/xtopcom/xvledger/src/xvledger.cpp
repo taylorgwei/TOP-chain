@@ -4,9 +4,16 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "../xvledger.h"
+#include <inttypes.h>
+#include <fstream>
+#include "json/value.h"
+#include "json/reader.h"
+#include "json/writer.h"
 #include "xbase/xcontext.h"
 #include "xbase/xthread.h"
 #include "xmetrics/xmetrics.h"
+#include "xblockstore/xblockstore_face.h"
+#include "xbase/xutl.h"
 
 #ifdef DEBUG
     #define DEBUG_XVLEDGER
@@ -1192,6 +1199,7 @@ namespace top
             m_chain_id = 0;
             m_current_node_roles = 0;
             m_current_process_id = 0;
+            m_round_number = 0;
             //end of initialize
             
             m_chain_id = chain_id;
@@ -1404,15 +1412,92 @@ namespace top
             return register_plugin(new_mgr,enum_xvchain_plugin_recycle_mgr);
         }
 
-        bool xvchain_t::set_node_type(top::common::xnode_type_t type)
-        {
-            m_node_type = type;
+        bool xvchain_t::set_auto_prune_data(const std::string& prune)
+        {   
+            std::string prune_enable = prune;
+            top::base::xstring_utl::tolower_string(prune_enable);
+            if (prune_enable != "off" && prune_enable != "on") {
+                return false;
+            }
+            if (prune_enable == "on")
+                m_auto_prune_data = 1;
+            else 
+                m_auto_prune_data = 0;
             return true;
         }
-        top::common::xnode_type_t xvchain_t::get_node_type()
+        uint16_t xvchain_t::get_auto_prune_data()
         {
-            return m_node_type;
+            return m_auto_prune_data;
         }
-    
+        bool xvchain_t::update_auto_prune_data(top::common::xnode_type_t node_type, base::xvdbstore_t* xvdb_ptr)
+        {
+            if (m_auto_prune_data == 0)
+                return true;
+            if (common::has<common::xnode_type_t::frozen>(node_type)) {
+                return true;
+            }
+            if (!common::has<common::xnode_type_t::storage>(node_type)) {
+                if (m_round_number < 5) {
+                    m_round_number++;
+                    xdbg("wait to start enable_block_recycler: %d", m_round_number);
+                    return true;
+                }
+                uint64_t now = get_time_now();
+                if (m_start_time + 5*60*1000000 < now) {
+                    xdbg("wait for enough time to start prune data: %" PRIu64 ",%" PRIu64, m_start_time, now);
+                    return true;
+                }
+                if (top::store::install_block_recycler(xvdb_ptr))
+                    xdbg("install_block_recycler ok.");
+                else
+                    xdbg("install_block_recycler fail.");
+                if (top::store::enable_block_recycler())
+                    xdbg("enable_block_recycler ok.");
+                else
+                    xdbg("enable_block_recycler fail.");
+                return true;
+            }
+            m_auto_prune_data = 0;
+            std::string prune_off("off");
+            if (!m_datadir_path.empty())
+                update_prune_config(prune_off);
+            return true;
+        }
+        int xvchain_t::update_prune_config(std::string& prune_enable) {
+            top::base::xstring_utl::tolower_string(prune_enable);
+            std::string extra_config = m_datadir_path + "/.extra_conf.json";
+            xJson::Value key_info_js;
+            std::ifstream keyfile(extra_config, std::ios::in);
+            if (keyfile) {
+                std::stringstream buffer;
+                buffer << keyfile.rdbuf();
+                keyfile.close();
+                std::string key_info = buffer.str();
+                xJson::Reader reader;
+                // ignore any error when parse
+                reader.parse(key_info, key_info_js);
+            }
+
+            key_info_js["auto_prune_data"] = prune_enable;
+
+            // dump new json to file
+            xJson::StyledWriter new_sw;
+            std::ofstream os;
+            os.open(extra_config);
+            if (!os.is_open()) {
+                return 1;
+            }
+            os << new_sw.write(key_info_js);
+            os.close();
+            return 0;
+        }
+        bool xvchain_t::set_datadir_path(const std::string& datadir_path) {
+            m_datadir_path = datadir_path;
+            return true;
+        }
+        bool xvchain_t::set_start_time(uint64_t start_time){
+            m_start_time = start_time;
+            return true;
+        }
     };//end of namespace of base
 };//end of namespace of top

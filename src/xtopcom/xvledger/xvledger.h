@@ -376,7 +376,7 @@ namespace top
             xveventbus_t*               get_xevmbus(); //global mbus object
             xvdrecycle_mgr*             get_xrecyclemgr(); //global recycler manager
             xvdrecycle_t*               get_xrecycler(enum_vdata_recycle_type type);//quick path
-            top::common::xnode_type_t   get_node_type();
+            uint16_t                    get_auto_prune_data();
         public:
             bool                        set_xdbstore(xvdbstore_t * new_store);//set global shared instance
             bool                        set_xtxstore(xvtxstore_t * new_store);
@@ -384,7 +384,11 @@ namespace top
             bool                        set_xstatestore(xvstatestore_t* new_sotre);
             bool                        set_xcontractstore(xvcontractstore_t * new_store);
             bool                        set_xevmbus(xveventbus_t * new_mbus);
-            bool                        set_node_type(top::common::xnode_type_t type);
+            bool                        set_auto_prune_data(const std::string& prune_enable);
+            bool                        update_auto_prune_data(top::common::xnode_type_t node_type, base::xvdbstore_t* xvdb_ptr);
+            bool                        set_datadir_path(const std::string& datadir_path);
+            int                         update_prune_config(std::string& prune_enable);
+            bool                        set_start_time(uint64_t start_time);
             
             //param of force_clean indicate whether force to close valid account
             virtual bool                clean_all(bool force_clean = false);//just do clean but not never destory objects of ledger/book/table
@@ -399,11 +403,14 @@ namespace top
             uint32_t                m_chain_id;//aka network_id
             uint32_t                m_current_node_roles;//multiple roles
             uint32_t                m_current_process_id;
-            common::xnode_type_t    m_node_type;
+            uint16_t                m_auto_prune_data;
+            std::string             m_datadir_path;
+            uint64_t                m_start_time;
         protected:
             xvledger_t*   m_ledgers[enum_vchain_has_buckets_count];
         private:
             static xvchain_t *      __global_vchain_instance;
+            uint16_t                m_round_number;
         };
         ///////////////////////provide general structure for xledger and related //////////////////
     
