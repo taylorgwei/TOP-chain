@@ -77,7 +77,6 @@ namespace top
 
             virtual bool                load_block_input(const base::xvaccount_t & account,base::xvblock_t* block,const int atag = 0) override;
             virtual bool                load_block_output(const base::xvaccount_t & account,base::xvblock_t* block,const int atag = 0) override;
-            virtual bool                load_block_flags(const base::xvaccount_t & account,base::xvblock_t* block,const int atag = 0) override;//update block'flags
 
             virtual bool                store_block(const base::xvaccount_t & account,base::xvblock_t* block,const int atag = 0) override;
             virtual bool                delete_block(const base::xvaccount_t & account,base::xvblock_t* block,const int atag = 0) override;

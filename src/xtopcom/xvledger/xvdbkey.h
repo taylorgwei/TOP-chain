@@ -11,6 +11,18 @@ namespace top
 {
     namespace base
     {
+        //new style(defined as character,optimized for i/o,db size etc),stored at dedicated CF(column Family)
+        enum enum_xvdb_cf_type
+        {
+            //new style(defined as character,optimized for i/o,db size etc)
+            enum_xvdb_cf_type_read_write  = 'w',  //default one for key that has Put/Update/Delete together
+            enum_xvdb_cf_type_update_most = 'u',  //update most once Put but rarely read; good for meta-data
+            enum_xvdb_cf_type_read_only   = 'r',  //read only once first Put.no update; good for block,txs
+            enum_xvdb_cf_type_log_only    = 'l',  //store as log(unreliable) and cleared unused & oldest one automatically(like LRU)
+            
+            //old style(defined by object) and stored at default CF(column Family)
+        };
+     
        enum enum_txindex_type
        {
            enum_txindex_type_main     = 0x00,  //main entry if need(optional)

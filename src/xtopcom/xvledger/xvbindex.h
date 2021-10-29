@@ -101,7 +101,7 @@ namespace top
 
 
             inline xvblock_t*           get_this_block() const {return m_linked_block;}
-            bool                        reset_this_block(xvblock_t* _block_ptr);
+            bool                        reset_this_block(xvblock_t* _block_ptr,bool delay_release_existing_one = false);
 
             void                        reset_next_viewid_offset(const int32_t next_viewid_offset);
         public:
@@ -137,21 +137,22 @@ namespace top
             std::string     m_last_fullblock_hash; //point to last full-block'hash
             uint64_t        m_last_fullblock_height;//height of m_last_full_block
             
+            std::string     m_extend_cert;
+            std::string     m_extend_data;
+            
             uint64_t        m_parent_block_height;//height of container(e.gtableblock) that may carry this block
             uint64_t        m_parent_block_viewid;//viewid of container(e.gtableblock) that may carry this block
             uint32_t        m_parent_block_entity_id{0};//entity id at parent block
-            std::string     m_extend_cert;
-            std::string     m_extend_data;
+
+            //(m_block_viewid + m_next_viewid_offset)point the block at same height but different viewid
+            int32_t         m_next_viewid_offset;
+            std::string     m_reserved;  //for future
             
             uint16_t        m_combineflags;     //[8bit:block-flags][1bit][7bit:store-bits]
             //[1][enum_xvblock_class][enum_xvblock_level][enum_xvblock_type][enum_xvblock_reserved]
             uint16_t        m_block_types;
             uint8_t         m_closed;           //indicated whether closed or not
             uint8_t         m_modified;         //indicated whether has any change that need persist again
-            
-            //(m_block_viewid + m_next_viewid_offset)point the block at same height but different viewid
-            int32_t         m_next_viewid_offset;
-            std::string     m_reserved;  //for future
         };
 
         class xvbindex_vector

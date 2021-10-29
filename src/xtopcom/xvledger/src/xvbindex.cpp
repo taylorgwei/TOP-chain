@@ -410,7 +410,7 @@ namespace top
             return false;
         }
      
-        bool     xvbindex_t::reset_this_block(xvblock_t* _block_ptr)
+        bool     xvbindex_t::reset_this_block(xvblock_t* _block_ptr,bool delay_release_existing_one)
         {
             if(_block_ptr == m_linked_block)
                 return true;
@@ -424,8 +424,12 @@ namespace top
                         _block_ptr->add_ref();
                         xvblock_t * old_ptr =  xatomic_t::xexchange(m_linked_block, _block_ptr);
                         if(old_ptr != NULL)
-                            old_ptr->release_ref();
-                        
+                        {
+                            if(delay_release_existing_one)
+                                xcontext_t::instance().delay_release_object(old_ptr);
+                            else
+                                old_ptr->release_ref();
+                        }
                         return true;
                     }
                     xerror("xvbindex_t::reset_this_block,get_block_hash() not match hash,block->dump=%s vs this=%s",_block_ptr->dump().c_str(),dump().c_str());
@@ -438,9 +442,13 @@ namespace top
             else
             {
                 xvblock_t * old_ptr =  xatomic_t::xexchange(m_linked_block, (xvblock_t*)NULL);
-                if(old_ptr != NULL)
-                    old_ptr->release_ref();
-                
+                if(old_ptr != NULL)//delay release to provide multiple-thread safe access
+                {
+                    if(delay_release_existing_one)
+                        xcontext_t::instance().delay_release_object(old_ptr);
+                    else
+                        old_ptr->release_ref();
+                }
                 return true;
             }
             return false;
