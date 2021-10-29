@@ -118,21 +118,18 @@ namespace top
             auto_xblockacct_ptr account_obj(target_table->get_lock(),this); \
             get_block_account(target_table,account_vid.get_address(),account_obj); \
 
-        xvblockstore_impl::xvblockstore_impl(const std::string & blockstore_path,base::xcontext_t & _context,const int32_t target_thread_id,base::xvdbstore_t* xvdb_ptr)
+        xvblockstore_impl::xvblockstore_impl(base::xcontext_t & _context,const int32_t target_thread_id,base::xvdbstore_t* xvdb_ptr)
             :base::xvblockstore_t(_context,target_thread_id)
         {
-            m_xvdb_ptr   = nullptr;
-
-            m_xvdb_ptr = xvdb_ptr;
-            m_xvdb_ptr->add_ref();
-
-            m_store_path = blockstore_path;
+            m_xvblockdb_ptr   = nullptr;
+            m_xvblockdb_ptr = new xvblockdb_t(xvdb_ptr);
+            m_store_path    = xvdb_ptr->get_store_path();
             xkinfo("xvblockstore_impl::create,store=%s,at thread=%d",m_store_path.c_str(),target_thread_id);
         }
 
         xvblockstore_impl::~xvblockstore_impl()
         {
-            m_xvdb_ptr->release_ref();
+            m_xvblockdb_ptr->release_ref();
             xkinfo("xvblockstore_impl::destroy,store=%s",m_store_path.c_str());
         }
 
@@ -170,7 +167,12 @@ namespace top
             
             #ifdef __new_plugin_by_lambda__
             #else
-            xblockacct_t * new_plugin =  new xchainacct_t(*auto_account_ptr,timeout_for_block_plugin,m_store_path,m_xvdb_ptr);//replace by new account address;;
+            
+            xblockacct_t * new_plugin = NULL;
+            if(auto_account_ptr->is_unit_address())
+                new_plugin =  new xunitbkplugin(*auto_account_ptr,timeout_for_block_plugin,m_xvblockdb_ptr);
+            else
+                new_plugin =  new xtablebkplugin(*auto_account_ptr,timeout_for_block_plugin,m_xvblockdb_ptr);
   
             base::xauto_ptr<base::xvactplugin_t> final_ptr(auto_account_ptr->get_set_plugin(new_plugin));
             inout_account_obj.transfer_owner((xblockacct_t*)final_ptr.get());
@@ -195,9 +197,9 @@ namespace top
             if(!target_index)
             {
                 if(target_height != 0)
-                    xdbg("xvblockstore_impl::load_block_from_index fail-invalid para at height(%llu) for account(%s) at store(%s)",target_height,target_account->get_address().c_str(),m_store_path.c_str());
+                    xdbg("xvblockstore_impl::load_block_from_index fail-invalid para at height(%llu) for account(%s) ",target_height,target_account->get_address().c_str());
                 else
-                    xwarn("xvblockstore_impl::load_block_from_index fail-invalid para for account(%s) at store(%s)",target_account->get_address().c_str(),m_store_path.c_str());
+                    xwarn("xvblockstore_impl::load_block_from_index fail-invalid para for account(%s)",target_account->get_address().c_str());
                 return nullptr;
             }
 
@@ -210,7 +212,7 @@ namespace top
                     XMETRICS_GAUGE((top::metrics::E_SIMPLE_METRICS_TAG)atag, 0);
                     XMETRICS_GAUGE(metrics::blockstore_blk_load, 0);
                     #endif                                        
-                    loaded_new_block = target_account->load_block_object(target_index, atag);
+                    loaded_new_block = get_blockdb_ptr()->load_block_object(target_index, atag);
                 } else {  // load from cache
                     #ifdef ENABLE_METRICS
                     XMETRICS_GAUGE((top::metrics::E_SIMPLE_METRICS_TAG)atag, 1);
@@ -220,8 +222,8 @@ namespace top
 
                 if(ask_full_load)
                 {
-                    target_account->load_index_input(target_index);
-                    target_account->load_index_output(target_index);
+                    get_blockdb_ptr()->load_block_input(target_index);
+                    get_blockdb_ptr()->load_block_output(target_index);
                 }
                 if(target_index->get_this_block() != NULL)
                 {
@@ -251,7 +253,7 @@ namespace top
                 // TODO(jimmy)
                 // 1.load on-demand by ask-full future
                 // 2.unit extend cert and extend data should be set after proved if has parent store
-                base::xvaccount_t parent_account(get_parent_table_account_from_unit_account(*target_account));
+                base::xvaccount_t parent_account(get_parent_table_account_from_unit_account(*target_account->get_account_obj()));
                 base::xauto_ptr<base::xvblock_t> parent_block(load_block_object(parent_account, target_index->get_parent_block_height(), target_index->get_parent_block_viewid(), true, atag));
                 if(!parent_block)
                 {
@@ -561,7 +563,14 @@ namespace top
             }
             LOAD_BLOCKACCOUNT_PLUGIN(account_obj,account);
             METRICS_TAG(atag, 1);
-            return account_obj->load_block_input(block);//XTODO,add logic to extract from tabeblock
+            
+            base::xauto_ptr<base::xvbindex_t> existing_index(account_obj->load_index(block->get_height(), block->get_block_hash()));
+            if(existing_index)
+            {
+                return get_blockdb_ptr()->load_block_input(existing_index(),block);
+                //XTODO,add logic to extract from tabeblock
+            }
+            return false;
         }
 
         bool                xvblockstore_impl::load_block_output(const base::xvaccount_t & account,base::xvblock_t* block,const int atag)
@@ -579,7 +588,14 @@ namespace top
             }
             LOAD_BLOCKACCOUNT_PLUGIN(account_obj,account);
             METRICS_TAG(atag, 1);
-            return account_obj->load_block_output(block);//XTODO,add logic to extract from tabeblock
+            
+            base::xauto_ptr<base::xvbindex_t> existing_index(account_obj->load_index(block->get_height(), block->get_block_hash()));
+            if(existing_index)
+            {
+                return get_blockdb_ptr()->load_block_output(existing_index(),block);
+                //XTODO,add logic to extract from tabeblock
+            }
+            return false;
         }
 
         bool    xvblockstore_impl::store_block(base::xauto_ptr<xblockacct_t> & container_account,base::xvblock_t * container_block,bool execute_block) //store table/book blocks if they are

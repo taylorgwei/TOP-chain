@@ -8,6 +8,7 @@
 #include <map>
 #include "xvledger/xvledger.h"
 #include "../xblockstore_face.h"
+#include "xvblockdb.h"
 #include "xvblockhub.h"
 
 namespace top
@@ -35,11 +36,14 @@ namespace top
             xvblockstore_impl   *   m_store_ptr;
         };
 
-        //note: layers for store :  [xvblock-store] --> [xstore] -->[xdb]
+        typedef std::function<base::xvbindex_t*(auto_xblockacct_ptr&) > xload_index_lambda;
+    
+        //note: layers for store :  [xvblockstore_t] -->[xvblockdb_t] -> [xvdbstore_t] -->[xdb]--->[RocksDB]
         class xvblockstore_impl : public base::xvblockstore_t
         {
+            friend class auto_xblockacct_ptr;
         public:
-            xvblockstore_impl(const std::string & blockstore_path,base::xcontext_t & _context,const int32_t target_thread_id,base::xvdbstore_t* xvdb_ptr);
+            xvblockstore_impl(base::xcontext_t & _context,const int32_t target_thread_id,base::xvdbstore_t* xvdb_ptr);
         protected:
             virtual ~xvblockstore_impl();
         private:
@@ -131,15 +135,17 @@ namespace top
             //a full path to load vblock could be  get_store_path()/create_object_path()/xvblock_t::name()
             virtual std::string          get_store_path() const override {return m_store_path;}//each store may has own space at DB/disk
 
+
+        protected:
+            xvblockdb_t*                get_blockdb_ptr() const {return m_xvblockdb_ptr;}
         private:
             bool                        on_block_stored(base::xvblock_t* this_block_ptr);//event for block store
 
             virtual bool                on_object_close() override;
 
-        private: //just access by self thread
-            base::xvdbstore_t*                       m_xvdb_ptr;
-        private://below are accessed by muliple threads
-            std::string                              m_store_path;
+        private:
+            xvblockdb_t*                       m_xvblockdb_ptr;
+            std::string                        m_store_path;
         };
 
     };//end of namespace of vstore

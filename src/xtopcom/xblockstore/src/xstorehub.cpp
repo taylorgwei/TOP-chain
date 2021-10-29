@@ -51,7 +51,7 @@ namespace top
                 return _static_blockstore;
 
             base::xvdbstore_t* xvdb_ptr = base::xvchain_t::instance().get_xdbstore();
-            _static_blockstore = new xvblockstore_impl(xvdb_ptr->get_store_path(),*m_monitor_thread->get_context(),m_monitor_thread->get_thread_id(),xvdb_ptr);
+            _static_blockstore = new xvblockstore_impl(*m_monitor_thread->get_context(),m_monitor_thread->get_thread_id(),xvdb_ptr);
 
             //set into global management
             base::xvchain_t::instance().set_xblockstore(_static_blockstore);
@@ -63,7 +63,7 @@ namespace top
             if(NULL == xvdb_ptr)
                 xvdb_ptr = base::xvchain_t::instance().get_xdbstore();
 
-            xvblockstore_impl * _blockstore = new xvblockstore_impl(xvdb_ptr->get_store_path(),*m_monitor_thread->get_context(),m_monitor_thread->get_thread_id(),xvdb_ptr);
+            xvblockstore_impl * _blockstore = new xvblockstore_impl(*m_monitor_thread->get_context(),m_monitor_thread->get_thread_id(),xvdb_ptr);
             return _blockstore;
         }
 

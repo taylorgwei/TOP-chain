@@ -11,6 +11,14 @@ namespace top
 {
     namespace store
     {
+        enum enum_blockstore_metrics_type
+        {
+            enum_blockstore_metrics_type_block_index        = 1,
+            enum_blockstore_metrics_type_block_object       = 2,
+            enum_blockstore_metrics_type_block_input_res    = 3,
+            enum_blockstore_metrics_type_block_output_res   = 4,
+        };
+    
         base::xvblockstore_t*  get_vblockstore();
         base::xvblockstore_t*  create_vblockstore(base::xvdbstore_t* xvdb_ptr);
     
