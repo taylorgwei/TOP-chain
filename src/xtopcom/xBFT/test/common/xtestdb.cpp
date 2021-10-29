@@ -4,6 +4,8 @@
 
 #include "xtestdb.hpp"
 
+#define __delete_db_data__
+
 namespace top
 {
     namespace test
@@ -143,8 +145,10 @@ namespace top
                     m_clock_store[key] = value;
                     if(m_clock_store.size() >= 128)
                     {
+                        #ifdef __delete_db_data__
                         if(m_clock_store2.empty() == false)
                             m_clock_store2.clear();
+                        #endif
                     }
                     if(m_clock_store.size() >= 256)
                         m_cur_clock_store += 1;
@@ -156,8 +160,10 @@ namespace top
                     m_clock_store2[key] = value;
                     if(m_clock_store2.size() >= 128)
                     {
+                        #ifdef __delete_db_data__
                         if(m_clock_store.empty() == false)
                             m_clock_store.clear();
+                        #endif
                     }
                     if(m_clock_store2.size() >= 256)
                         m_cur_clock_store += 1;
@@ -174,7 +180,9 @@ namespace top
                     m_dumy_store[key] = value;
                     if(m_dumy_store.size() >= 128)
                     {
+                        #ifdef __delete_db_data__
                         m_dumy_store2.clear();
+                        #endif
                     }
                     if(m_dumy_store.size() >= 256)
                         m_cur_data_store += 1;
@@ -184,7 +192,9 @@ namespace top
                     m_dumy_store2[key] = value;
                     if(m_dumy_store2.size() >= 128)
                     {
+                        #ifdef __delete_db_data__
                         m_dumy_store.clear();
+                        #endif
                     }
                     if(m_dumy_store2.size() >= 256)
                         m_cur_data_store += 1;
@@ -315,9 +325,37 @@ namespace top
             return std::string();
         }
     
-        bool  xstoredb_t::find_values(const std::string & key,std::vector<std::string> & values)//support wild search
+        bool  xstoredb_t::delete_values(std::vector<std::string> & to_deleted_keys)
         {
-            return false;
+            for(auto & key : to_deleted_keys)
+            {
+                delete_value(key);
+            }
+            return true;
+        }
+        
+        //prefix must start from first char of key
+        bool  xstoredb_t::read_range(const std::string& prefix, std::vector<std::string>& values)
+        {
+            for(auto it = m_dumy_store.begin(); it != m_dumy_store.end(); ++it)
+            {
+                if(it->first.find(prefix) != std::string::npos)
+                {
+                    values.push_back(it->second);
+                }
+            }
+            return (values.empty() == false);
+        }
+ 
+        //note:begin_key and end_key must has same style(first char of key)
+        bool  xstoredb_t::delete_range(const std::string & begin_key,const std::string & end_key)
+        {
+            return true;
+        }
+        
+        bool  xstoredb_t::single_delete(const std::string & target_key)//key must be readonly(never update after PUT),otherwise the behavior is undefined
+        {
+            return delete_value(target_key);
         }
     
         void   xveventbus_impl::push_event(const mbus::xevent_ptr_t& e)

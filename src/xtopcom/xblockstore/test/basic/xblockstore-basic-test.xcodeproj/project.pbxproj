@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		992D5D66272B9A8500C32A3C /* libxvledger.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 992D5D65272B9A8500C32A3C /* libxvledger.a */; };
 		998DBCF02461E7580048BF49 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 998DBCEF2461E7580048BF49 /* main.cpp */; };
 		998DBCF52461E8250048BF49 /* libxbase.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 998DBCF22461E8250048BF49 /* libxbase.a */; };
 		998DBCF62461E8250048BF49 /* libxblockstore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 998DBCF32461E8250048BF49 /* libxblockstore.a */; };
@@ -29,6 +30,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		992D5D65272B9A8500C32A3C /* libxvledger.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libxvledger.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		998DBCE52461E6750048BF49 /* xblockstore-basic-test */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "xblockstore-basic-test"; sourceTree = BUILT_PRODUCTS_DIR; };
 		998DBCEF2461E7580048BF49 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		998DBCF22461E8250048BF49 /* libxbase.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libxbase.a; path = "../../../../../../../../Library/Developer/Xcode/DerivedData/xtopcom-ajajxyvvzkhyzsersovaaixrqafq/Build/Products/Debug/libxbase.a"; sourceTree = "<group>"; };
@@ -47,6 +49,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				992D5D66272B9A8500C32A3C /* libxvledger.a in Frameworks */,
 				998DBCF52461E8250048BF49 /* libxbase.a in Frameworks */,
 				998DBCF62461E8250048BF49 /* libxblockstore.a in Frameworks */,
 				998DBCF72461E8250048BF49 /* libxcertauth.a in Frameworks */,
@@ -82,6 +85,7 @@
 		998DBCF12461E8250048BF49 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				992D5D65272B9A8500C32A3C /* libxvledger.a */,
 				998DBCF22461E8250048BF49 /* libxbase.a */,
 				998DBCF32461E8250048BF49 /* libxblockstore.a */,
 				998DBCF42461E8250048BF49 /* libxcertauth.a */,
@@ -129,6 +133,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 998DBCDC2461E6750048BF49;
