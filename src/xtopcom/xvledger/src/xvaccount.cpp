@@ -20,7 +20,7 @@ namespace top
             const std::string& account_full_adress = _account.get_address();
             if (account_full_adress.size() < enum_vaccount_address_prefix_size) {
                 xerror("xvaccount_t::get_storage_key fail,address=%s", account_full_adress.c_str());
-                return std::string();
+                return account_full_adress;
             }
             
             //step#1: extract the raw address of public key from full-address
