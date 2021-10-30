@@ -13,6 +13,8 @@
 #include "xunitblock.hpp"
 #include "xtestshard.hpp"
 
+#include "xblockstore/xblockstore_face.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -220,6 +222,9 @@ int main(int argc, const char * argv[])
     base::xworkerpool_t_impl<1> *global_worker_pool = new base::xworkerpool_t_impl<1>(top::base::xcontext_t::instance());
     xtestshard * test_shard = new xtestshard(*global_worker_pool,nodes_list);
  
+    top::store::enable_block_recycler(true);
+    top::store::install_block_recycler(NULL);
+    
     catch_system_signals();
     sleep(2); //let xtestshard finish initialization
 

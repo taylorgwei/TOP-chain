@@ -10,7 +10,61 @@ namespace top
 {
     namespace store
     {
-        xblockevent_t::xblockevent_t(enum_blockstore_event type,base::xvbindex_t* index,base::xvactplugin_t* plugin,const base::xblockmeta_t& meta)
+        xvblockplugin_t::xvblockplugin_t(base::xvaccountobj_t & parent_obj,const uint64_t idle_timeout_ms)
+        :xvactplugin_t(parent_obj,idle_timeout_ms,base::enum_xvaccount_plugin_blockmgr)
+        {
+            m_layer2_cache_meta = NULL;
+        }
+        
+        xvblockplugin_t::~xvblockplugin_t()
+        {
+            if(m_layer2_cache_meta != NULL)
+                delete m_layer2_cache_meta;
+        }
+        
+        bool  xvblockplugin_t::init_meta(const base::xvactmeta_t & meta)
+        {
+            if(NULL == m_layer2_cache_meta)
+            {
+                base::xblockmeta_t* new_meta_obj = new base::xblockmeta_t(meta.clone_block_meta());
+                m_layer2_cache_meta = new_meta_obj;
+                return true;
+            }
+            xassert(NULL == m_layer2_cache_meta);
+            return false;
+        }
+        
+        const base::xblockmeta_t*   xvblockplugin_t::get_block_meta() const
+        {
+            return m_layer2_cache_meta;
+        }
+        
+        bool  xvblockplugin_t::save_meta()
+        {
+            get_account_obj()->update_meta(this);
+            get_account_obj()->save_meta();//force to save one
+            return true;
+        }
+        
+        bool  xvblockplugin_t::update_meta()
+        {
+            return get_account_obj()->update_meta(this);
+        }
+        
+        bool   xvblockplugin_t::set_latest_deleted_block_height(const uint64_t height)
+        {
+            if(NULL != m_layer2_cache_meta)
+            {
+                if(height > m_layer2_cache_meta->_highest_deleted_block_height)
+                {
+                    base::xatomic_t::xstore(m_layer2_cache_meta->_highest_deleted_block_height, height);
+                    return true;
+                }
+            }
+            return false;
+        }
+    
+        xblockevent_t::xblockevent_t(enum_blockstore_event type,base::xvbindex_t* index,xvblockplugin_t* plugin,const base::xblockmeta_t& meta)
         : _meta_info(meta)
         {
             _event_type     = type;

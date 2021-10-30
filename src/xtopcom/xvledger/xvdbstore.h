@@ -52,7 +52,15 @@ namespace top
         public://new api for range ops
             //prefix must start from first char of key
             virtual bool             read_range(const std::string& prefix, std::vector<std::string>& values) = 0;
+            
             //note:begin_key and end_key must has same style(first char of key)
+            // Removes the database entries in the range ["begin_key", "end_key"), i.e.,
+            // including "begin_key" and excluding "end_key". Returns OK on success, and
+            // a non-OK status on error. It is not an error if the database does not
+            // contain any existing data in the range ["begin_key", "end_key").
+            //
+            // If "end_key" comes before "start_key" according to the user's comparator,
+            // a `Status::InvalidArgument` is returned.
             virtual bool             delete_range(const std::string & begin_key,const std::string & end_key) = 0;
             //key must be readonly(never update after PUT),otherwise the behavior is undefined
             virtual bool             single_delete(const std::string & target_key) = 0;

@@ -139,6 +139,7 @@ namespace top
         protected:
             xvblockdb_t*                get_blockdb_ptr() const {return m_xvblockdb_ptr;}
         private:
+            bool                        on_block_committed(const xblockevent_t & event);
             bool                        on_block_stored(base::xvblock_t* this_block_ptr);//event for block store
 
             virtual bool                on_object_close() override;

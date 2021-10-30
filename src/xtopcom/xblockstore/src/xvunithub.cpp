@@ -7,6 +7,7 @@
 #include "xbase/xcontext.h"
 #include "xbase/xthread.h"
 #include "xvunithub.h"
+#include "xvledger/xvdrecycle.h"
 
 #include "xmetrics/xmetrics.h"
 #define METRICS_TAG(tag, val) XMETRICS_GAUGE((top::metrics::E_SIMPLE_METRICS_TAG)tag, val)
@@ -54,6 +55,18 @@ namespace top
 
                 //finally unlock it
                 m_mutex.unlock();
+                
+                //handle events after unlock
+                for(auto & event : block_events)
+                {
+                    if(event.get_index() != NULL) //still valid
+                    {
+                        if(enum_blockstore_event_committed == event.get_type())
+                        {
+                            m_store_ptr->on_block_committed(event);
+                        }
+                    }
+                }
             }
             else
             {
@@ -915,6 +928,47 @@ namespace top
             LOAD_BLOCKACCOUNT_PLUGIN(account_obj,account);
             METRICS_TAG(atag, 1);
             return account_obj->clean_caches(true,true);
+        }
+        
+        bool      xvblockstore_impl::on_block_committed(const xblockevent_t & event)
+        {
+            base::xvbindex_t* index_ptr = event.get_index();
+            if(NULL == index_ptr)
+                return false;
+            
+            xdbg("xvblockstore_impl::on_block_committed,at account=%s,index=%s",index_ptr->get_account().c_str(),index_ptr->dump().c_str());
+            
+            #ifdef __FIRE_MBUS_EVENT_ON_UNITHUB_LAYER__
+            if(index_ptr->get_block_level() == base::enum_xvblock_level_table
+               && index_ptr->get_block_flags() & base::enum_xvblock_flag_committed
+               && index_ptr->get_height() != 0)
+            {
+                base::xveventbus_t * mbus = base::xvchain_t::instance().get_xevmbus();
+                xassert(mbus != NULL);
+                if(mbus != NULL)
+                {
+                    if(index_ptr->get_height() != 0)
+                    {
+                        mbus::xevent_ptr_t event = mbus->create_event_for_store_committed_block(index_ptr);
+                        if (event != nullptr) {
+                            mbus->push_event(event);
+                        }
+                    }
+                    xdbg_info("xvblockstore_impl::on_block_committed,done at store(%s)-> block=%s",get_store_path().c_str(),index_ptr->dump().c_str());
+                }
+            }
+            #endif //end of __FIRE_MBUS_EVENT_ON_UNITHUB_LAYER__
+            
+            base::xblockrecycler_t* recycler = base::xvchain_t::instance().get_xrecyclemgr()->get_block_recycler();
+            if(recycler != NULL)
+            {
+                base::xblockmeta_t clone_meta(event.get_meta());
+                if(recycler->recycle(*index_ptr, clone_meta))
+                {
+                    event.get_plugin()->set_latest_deleted_block_height(clone_meta._highest_deleted_block_height);
+                }
+            }
+            return true;
         }
 
         bool      xvblockstore_impl::on_block_stored(base::xvblock_t* this_block_ptr)

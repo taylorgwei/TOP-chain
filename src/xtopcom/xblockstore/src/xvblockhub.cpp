@@ -24,47 +24,6 @@ namespace top
 {
     namespace store
     {
-        xvblockplugin_t::xvblockplugin_t(base::xvaccountobj_t & parent_obj,const uint64_t idle_timeout_ms)
-            :xvactplugin_t(parent_obj,idle_timeout_ms,base::enum_xvaccount_plugin_blockmgr)
-        {
-            m_layer2_cache_meta = NULL;
-        }
-        
-        xvblockplugin_t::~xvblockplugin_t()
-        {
-            if(m_layer2_cache_meta != NULL)
-                delete m_layer2_cache_meta;
-        }
-           
-        bool  xvblockplugin_t::init_meta(const base::xvactmeta_t & meta)
-        {
-            if(NULL == m_layer2_cache_meta)
-            {
-                base::xblockmeta_t* new_meta_obj = new base::xblockmeta_t(meta.clone_block_meta());
-                m_layer2_cache_meta = new_meta_obj;
-                return true;
-            }
-            xassert(NULL == m_layer2_cache_meta);
-            return false;
-        }
-        
-        const base::xblockmeta_t*   xvblockplugin_t::get_block_meta() const
-        {
-            return m_layer2_cache_meta;
-        }
-        
-        bool  xvblockplugin_t::save_meta()
-        {
-            get_account_obj()->update_meta(this);
-            get_account_obj()->save_meta();//force to save one
-            return true;
-        }
-        
-        bool  xvblockplugin_t::update_meta()
-        {
-            return get_account_obj()->update_meta(this);
-        }
-
         xblockacct_t::xblockacct_t(base::xvaccountobj_t & parent_obj,const uint64_t timeout_ms,xvblockdb_t * xvbkdb_ptr)
             :xvblockplugin_t(parent_obj,timeout_ms)
         {
@@ -1830,6 +1789,10 @@ namespace top
                 new_idx->reset_modify_flag(); //remove modified flag to avoid double saving
 
                 load_index(new_idx->get_height()); //always load index first for non-genesis block
+            }
+            else//genesis block
+            {
+                new_idx->set_store_flag(base::enum_index_store_flag_main_entry);//force to set
             }
 
             //note: emplace return a pair<iterator,bool>, value of bool indicate whether inserted or not, value of iterator point to inserted it

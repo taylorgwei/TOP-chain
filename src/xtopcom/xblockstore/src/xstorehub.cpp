@@ -93,9 +93,12 @@ namespace top
             return base::xvchain_t::instance().get_xrecyclemgr()->set_block_recycler(*recycler);
         }
     
-        bool enable_block_recycler()
+        bool enable_block_recycler(bool enable)
         {
-            return base::xvchain_t::instance().get_xrecyclemgr()->turn_on_recycler(base::enum_vdata_recycle_type_block);
+            if (enable)
+                return base::xvchain_t::instance().get_xrecyclemgr()->turn_on_recycler(base::enum_vdata_recycle_type_block);
+            else
+                return base::xvchain_t::instance().get_xrecyclemgr()->turn_off_recycler(base::enum_vdata_recycle_type_block);
         }
 
     };//end of namespace of vstore

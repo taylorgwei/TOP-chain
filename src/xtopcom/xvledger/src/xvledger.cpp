@@ -348,31 +348,7 @@ namespace top
             const uint64_t atom_copy = base::xatomic_t::xload( meta_ptr->get_state_meta()._highest_execute_block_height);
             return atom_copy;
         }
-    
-        bool   xvaccountobj_t::set_latest_deleted_block_height(const uint64_t height)
-        {
-            if(is_close())//not allow write anymore at closed status
-                return false;
-            
-            xauto_lock<xspinlock_t> locker(get_spin_lock());
-            xvactmeta_t * meta_ptr = get_meta();
-            if(height > meta_ptr->get_block_meta()._highest_deleted_block_height)
-            {
-                base::xatomic_t::xstore(meta_ptr->get_block_meta()._highest_deleted_block_height,height);
-                meta_ptr->add_modified_count();
-                return true;
-            }
-            return false;
-        }
-    
-        const uint64_t  xvaccountobj_t::get_latest_deleted_block_height()
-        {
-            //note:meta_ptr never be destroy,it is safe to get it without lock
-            xvactmeta_t * meta_ptr = get_meta();
-            const uint64_t atom_copy = base::xatomic_t::xload( meta_ptr->get_block_meta()._highest_deleted_block_height);
-            return atom_copy;
-        }
-    
+      
         bool   xvaccountobj_t::recover_meta(xvactmeta_t & _meta)//recover at account level if possible
         {
             return false;//default do nothing at account level

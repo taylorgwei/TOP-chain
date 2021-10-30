@@ -14,28 +14,6 @@ namespace top
 {
     namespace store
     {
-        class xvblockplugin_t : public base::xvactplugin_t
-        {
-        protected:
-            xvblockplugin_t(base::xvaccountobj_t & parent_obj,const uint64_t idle_timeout_ms);
-            virtual ~xvblockplugin_t();
-        private:
-            xvblockplugin_t();
-            xvblockplugin_t(xvblockplugin_t &&);
-            xvblockplugin_t(const xvblockplugin_t &);
-            xvblockplugin_t & operator = (const xvblockplugin_t &);
-        protected:
-            //only allow call once
-            virtual bool                    init_meta(const base::xvactmeta_t & meta) override;
-            
-        protected:
-            virtual const base::xblockmeta_t*     get_block_meta() const override;
-            virtual bool                    save_meta()  override; //peristen meta
-            virtual bool                    update_meta() override;//update meta into cache
-        private:
-            base::xblockmeta_t*   m_layer2_cache_meta; //L2 cache for plugin,and account ' meta is L1 cache
-        };
-
         //each account has own virtual store
         class xblockacct_t : public xvblockplugin_t
         {

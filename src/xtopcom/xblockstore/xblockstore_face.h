@@ -23,6 +23,6 @@ namespace top
         base::xvblockstore_t*  create_vblockstore(base::xvdbstore_t* xvdb_ptr);
     
         bool                   install_block_recycler(base::xvdbstore_t* xvdb_ptr);
-        bool                   enable_block_recycler();//off as default
+        bool                   enable_block_recycler(bool enable);//off as default
     };//end of namespace of xledger
 };//end of namespace of top
