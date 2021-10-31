@@ -1304,17 +1304,19 @@ namespace top
             :xionode_t(xcontext_t::instance(),thread_id,enum_xobject_type_vchain)
         {
             //initialize
-            m_reserved_1 = 0;
+            m_is_auto_prune = 0;//init as disabled status
             m_reserved_2 = 0;
             m_reserved_3 = 0;
             m_chain_id = 0;
             m_current_node_roles = 0;
             m_current_process_id = 0;
+            m_proces_start_time  = 0;
             //end of initialize
             
             m_chain_id = chain_id;
             memset(m_ledgers,0,sizeof(m_ledgers));
             m_current_process_id = base::xsys_utl::get_sys_process_id();
+            m_proces_start_time = xtime_utl::gmttime_ms();
             
             //build default stores
             xauto_ptr<xvstatestore_t> default_state_store(new xvstatestore_t());
@@ -1552,6 +1554,23 @@ namespace top
                 return false;
             
             return register_plugin(new_mgr,enum_xvchain_plugin_recycle_mgr);
+        }
+        
+        bool  xvchain_t::set_data_dir_path(const std::string & dir_path)
+        {
+            if(m_data_dir_path.empty() == false)//not allow overwrited
+                return false;
+            
+            m_data_dir_path = dir_path;
+            return true;
+        }
+    
+        void  xvchain_t::enable_auto_prune(bool enable)
+        {
+            if(enable)
+                m_is_auto_prune = 1;
+            else
+                m_is_auto_prune = 0;
         }
     
     };//end of namespace of base

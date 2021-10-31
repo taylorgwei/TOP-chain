@@ -224,6 +224,7 @@ int main(int argc, const char * argv[])
  
     top::store::enable_block_recycler(true);
     top::store::install_block_recycler(NULL);
+    top::base::xvchain_t::instance().enable_auto_prune(true);
     
     catch_system_signals();
     sleep(2); //let xtestshard finish initialization

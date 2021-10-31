@@ -119,7 +119,7 @@ private:
     void sync_add_vnet();
     void sync_remove_vnet();
     void update_tx_cache_service();
-    void update_block_prune();
+    bool update_auto_prune_control(top::common::xnode_type_t node_type, base::xvdbstore_t* xvdb_ptr);
 };
 
 using xvnode_t = xtop_vnode;

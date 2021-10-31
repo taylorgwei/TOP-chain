@@ -366,7 +366,10 @@ namespace top
             inline const int            get_chain_id()     const {return (int)m_chain_id;}
             inline const int            get_network_id()   const {return (int)m_chain_id;}
             inline const uint32_t       get_current_process_id() const {return m_current_process_id;}
- 
+            inline const uint64_t       get_process_start_time() const {return m_proces_start_time;}//gmt
+            inline const std::string&   get_data_dir_path()      const {return m_data_dir_path;}
+            inline bool                 is_auto_prune_enable()   const {return (m_is_auto_prune != 0);}
+            
         public://note:each bucket/ledger may have own db and blockstore etc
             xvdbstore_t*                get_xdbstore(); //global shared db instance
             xvtxstore_t*                get_xtxstore();   //global shared xvtxstore_t instance
@@ -385,6 +388,9 @@ namespace top
             bool                        set_xcontractstore(xvcontractstore_t * new_store);
             bool                        set_xevmbus(xveventbus_t * new_mbus);
             
+            bool                        set_data_dir_path(const std::string & dir_path);
+            void                        enable_auto_prune(bool enable);
+            
             //param of force_clean indicate whether force to close valid account
             virtual bool                clean_all(bool force_clean = false);//just do clean but not never destory objects of ledger/book/table
             
@@ -395,12 +401,14 @@ namespace top
             bool                        set_xrecyclemgr(xvdrecycle_mgr* new_mgr);
         private:
             std::recursive_mutex    m_lock;
-            uint8_t                 m_reserved_1;
+            uint8_t                 m_is_auto_prune;//1 means on,0 means off
             uint8_t                 m_reserved_2;
             uint16_t                m_reserved_3;
             uint32_t                m_chain_id;//aka network_id
             uint32_t                m_current_node_roles;//multiple roles
             uint32_t                m_current_process_id;
+            uint64_t                m_proces_start_time; //GMT times as seconds
+            std::string             m_data_dir_path;
         protected:
             xvledger_t*   m_ledgers[enum_vchain_has_buckets_count];
         private:
