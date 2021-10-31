@@ -63,24 +63,36 @@ namespace top
 
         bool  xblockacct_t::init_meta(const base::xvactmeta_t & account_meta)
         {
-            if(xvblockplugin_t::init_meta(account_meta))
-            {
-                m_meta = (base::xblockmeta_t*)get_block_meta();
-                recover_meta(account_meta);
-                //note:after here, dont delete m_meta that reserved just for code compatibible
-            }
+            bool changed_meta = false;
+
+            xvblockplugin_t::init_meta(account_meta);
+            m_meta = (base::xblockmeta_t*)get_block_meta();
+            if(recover_meta(account_meta))
+                changed_meta = true;//mark changed something
             
             if(get_blockdb_ptr()->get_blockstore_version() >= enum_xblockstore_prunable_version)
             {
                 if(m_meta->_lowest_vkey2_block_height == (uint64_t)-1) //not initted
                 {
                     m_meta->_lowest_vkey2_block_height = m_meta->_highest_cert_block_height + 1;
+                    changed_meta = true;//mark changed something
                 }
             }
             
-            xinfo("xblockacct_t::init_meta,account=%s objectid=% " PRId64 ",this=% " PRId64 ",meta=%s",
+            if(changed_meta)
+            {
+                
+                
+                xwarn("xblockacct_t::init_meta,changed meta for account=%s objectid=% " PRId64 ",this=% " PRId64 ",meta=%s",
                   dump().c_str(),
                   get_obj_id(),this,m_meta->ddump().c_str());
+            }
+            else
+            {
+                xinfo("xblockacct_t::init_meta,account=%s objectid=% " PRId64 ",this=% " PRId64 ",meta=%s",
+                      dump().c_str(),
+                      get_obj_id(),this,m_meta->ddump().c_str());
+            }
             return true;
         }
         
@@ -109,6 +121,19 @@ namespace top
                     break;
                 }
             }
+            
+            //try recover full_block from highest commit block
+            load_index(m_meta->_highest_commit_block_height);
+            base::xauto_ptr<base::xvbindex_t> latest_commit(query_latest_index(base::enum_xvblock_flag_committed));
+            if(latest_commit)//query_latest_index has been return a added-reference ptr
+            {
+                if(latest_commit->get_height() > 0)
+                {
+                    if(load_index(latest_commit->get_last_full_block_height()) > 0)
+                        xwarn("xblockacct_t::recover_meta,recover full_block at height=% " PRId64 " of account(%s)",latest_commit->get_last_full_block_height(),get_address().c_str());
+                }
+            }
+            
             return recovered_something;
         }
  

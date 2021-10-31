@@ -188,7 +188,7 @@ namespace top
         }
         
         //fetch and update together
-        bool   xvaccountobj_t::update_meta(xvactplugin_t * plugin)
+        bool   xvaccountobj_t::update_block_meta(xvactplugin_t * plugin)
         {
             if(is_close())//not allow write anymore at closed status
                 return false;

@@ -39,6 +39,8 @@ namespace top
         protected:
             base::xvdbstore_t *  get_xvdb() const {return m_xvdb_ptr;}
             
+            //manage to prune contract blocks
+            bool  recycle_contract(const base::xvaccount_t & account_obj,base::xblockmeta_t & account_meta);
             //mange to prune table blocks
             bool  recycle_table(const base::xvaccount_t & account_obj,base::xblockmeta_t & account_meta);
             //mange to prune unit blocks

@@ -41,14 +41,14 @@ namespace top
         
         bool  xvblockplugin_t::save_meta()
         {
-            get_account_obj()->update_meta(this);
+            get_account_obj()->update_block_meta(this);
             get_account_obj()->save_meta();//force to save one
             return true;
         }
         
         bool  xvblockplugin_t::update_meta()
         {
-            return get_account_obj()->update_meta(this);
+            return get_account_obj()->update_block_meta(this);
         }
         
         bool   xvblockplugin_t::set_latest_deleted_block_height(const uint64_t height)

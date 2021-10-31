@@ -146,7 +146,7 @@ namespace top
             const uint64_t          get_latest_executed_block_height();
 
             bool                    save_meta(bool carry_process_id = true);
-            bool                    update_meta(xvactplugin_t * plugin);
+            bool                    update_block_meta(xvactplugin_t * plugin);
         protected:
             std::recursive_mutex&   get_table_lock();
             xspinlock_t&            get_spin_lock()  {return m_spin_lock;}

@@ -60,8 +60,17 @@ namespace top
             
             if(account_obj.is_unit_address())
                 return recycle_unit(account_obj,account_meta);
-            else
+            else if(account_obj.is_table_address())
                 return recycle_table(account_obj,account_meta);
+            else if(account_obj.is_contract_address())
+                return recycle_contract(account_obj,account_meta);
+            
+            return false;
+        }
+    
+        bool  xvblockprune_impl::recycle_contract(const base::xvaccount_t & account_obj,base::xblockmeta_t & account_meta)
+        {
+            return false;
         }
         
         bool  xvblockprune_impl::recycle_table(const base::xvaccount_t & account_obj,base::xblockmeta_t & account_meta)
