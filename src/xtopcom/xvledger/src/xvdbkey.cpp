@@ -15,7 +15,8 @@ namespace top
         {
             char szBuff[32] = {0};
             const int inBufLen = sizeof(szBuff);
-            snprintf(szBuff,inBufLen,"%16llx",uint64value);
+            //snprintf(szBuff,inBufLen,"%16llx",uint64value);
+            snprintf(szBuff,inBufLen,"%16llx", (long long unsigned int)uint64value);
             return std::string(szBuff);
         }
     
