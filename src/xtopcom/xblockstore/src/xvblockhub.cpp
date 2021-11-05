@@ -280,13 +280,14 @@ namespace top
                                 {
                                     if(it->second->get_this_block()->get_refcount() == 1)//no any other hold
                                     {
+                                        xdbg_info("xblockacct_t::clean_caches,block=%s",it->second->dump().c_str());
+                                        
                                         //store any modified blocks again if need
                                         write_block(it->second);
                                         write_index(it->second);
                                         
                                         it->second->reset_this_block(NULL);
                                         cleaned_one = true;
-                                        xdbg_info("xblockacct_t::clean_caches,block=%s",it->second->dump().c_str());
                                     }
                                 }
                             }
@@ -332,14 +333,14 @@ namespace top
                     {
                         //const uint64_t this_block_height = view_it->second->get_height();
                         //const int      this_block_flags  = view_it->second->get_block_flags();
-
+                        xdbg_info("xblockacct_t::close_blocks,block=%s",view_it->second->dump().c_str());
+                        
                         //at entry of close we need make sure everything is consist
                         update_meta_metric(view_it->second);  //udate other meta and connect info
                         //may determine whether need do real save
                         write_block(view_it->second);
                         write_index(view_it->second);
                         
-                        xdbg_info("xblockacct_t::close_blocks,block=%s",view_it->second->dump().c_str());
 
                         view_it->second->close();//disconnect from prev-block and next-block,if have
                         view_it->second->release_ref();
@@ -1118,7 +1119,8 @@ namespace top
                     //just store raw-block without index
                     if(final_cached_index->check_store_flag(base::enum_index_store_flag_non_index))
                     {
-                        final_cached_index->reset_this_block(new_raw_block);//force to bind raw block ptr
+                        if(final_cached_index->get_this_block() == NULL)
+                            final_cached_index->reset_this_block(new_raw_block);//force to bind raw block ptr
                         
                         #ifdef __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
                         //lazy to save raw block unti committed or closing
@@ -1895,7 +1897,23 @@ namespace top
             base::xvbindex_t * cached_index_ptr = cache_index(new_idx(),height_view_map);
             if(cached_index_ptr != nullptr) //insert or updated successful
             {
+                if(cached_index_ptr->check_store_flag(base::enum_index_store_flag_non_index))
+                {
+                    base::xauto_ptr<base::xvblock_t> cloned_block(new_raw_block->clone_block());
+                    cloned_block->reset_modified_count();//clean modifed count as fresh start
+                    
+                    //sync flags from index to raw block
+                    if(cached_index_ptr->check_block_flag(base::enum_xvblock_flag_locked))
+                        cloned_block->set_block_flag(base::enum_xvblock_flag_locked);
+                    
+                    if(cached_index_ptr->check_block_flag(base::enum_xvblock_flag_committed))
+                        cloned_block->set_block_flag(base::enum_xvblock_flag_committed);
+                    
+                    //force to bind raw block ptr until block to commit or saved
+                    cached_index_ptr->reset_this_block(cloned_block());
+                }
                 cached_index_ptr->set_modified_flag(); //force set flag to store later
+                
                 //connect as chain,and check connected_flag and meta
                 connect_index(cached_index_ptr);//here may change index'status
                 //rebase forked blocks if have ,after connect_index
@@ -2108,7 +2126,6 @@ namespace top
         {
             if(NULL == new_block_ptr)
             {
-                xassert(0);
                 return false;
             }
             
