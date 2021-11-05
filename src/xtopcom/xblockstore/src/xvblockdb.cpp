@@ -566,7 +566,10 @@ namespace top
                     xassert(0); //should not happen at release that dont have test blocks
                     #endif
                 }
-
+                
+                new_block_ptr->set_block_flag(base::enum_xvblock_flag_stored);//force add stored flag
+                new_block_ptr->reset_modified_count();//force remove flag of modified
+                
                 if(index_ptr->get_this_block() == NULL)//double check again
                     index_ptr->reset_this_block(new_block_ptr.get(),true);//link to raw block for index
             }
