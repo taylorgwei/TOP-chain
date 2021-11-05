@@ -16,6 +16,7 @@
 #endif
  
 #ifndef __PERSIST_SAVE_UNIT_WITHOUT_INDEX__
+    #define __PERSIST_SAVE_UNIT_WITHOUT_INDEX__
 #endif
 
 #define __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
@@ -1114,19 +1115,41 @@ namespace top
 
                 if(final_cached_index->is_unit_address())
                 {
-                    //write_block_to_db may do double-check whether raw block not stored yet
-                    write_block(final_cached_index,new_raw_block);
-                    
-                    #ifdef __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
-                    //lazy to save index unti committed or closing
-                    if(final_cached_index->check_block_flag(base::enum_xvblock_flag_committed))
-                    #endif
+                    //just store raw-block without index
+                    if(final_cached_index->check_store_flag(base::enum_index_store_flag_non_index))
                     {
-                        //try save index finally
-                        write_index(final_cached_index); //save index then
+                        final_cached_index->reset_this_block(new_raw_block);//force to bind raw block ptr
+                        
+                        #ifdef __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
+                        //lazy to save raw block unti committed or closing
+                        if(final_cached_index->check_block_flag(base::enum_xvblock_flag_committed))
+                        #endif
+                        {
+                            //write_block_to_db may do double-check whether raw block not stored yet
+                            write_block(final_cached_index,new_raw_block);
+                            
+                            //we not save index seperately
+                            final_cached_index->reset_modify_flag(); //clean up modified flags
+                            //NOTE: raw_block ptr must be valid at all time
+                        }
+                    }
+                    else //model of store block and index
+                    {
+                        //write_block_to_db may do double-check whether raw block not stored yet
+                        write_block(final_cached_index,new_raw_block);
+                        
+                        #ifdef __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
+                        //lazy to save index unti committed or closing
+                        if(final_cached_index->check_block_flag(base::enum_xvblock_flag_committed))
+                        #endif
+                        {
+                            //try save index finally
+                            write_index(final_cached_index); //save index then
+                        }
+                        //Note: reset_this_block(NULL) here if want save memory more and not care cache effect
                     }
                 }
-                else
+                else //instant save block and index for table/book blocks
                 {
                     //write_block_to_db may do double-check whether raw block not stored yet
                     write_block(final_cached_index,new_raw_block);
@@ -1138,11 +1161,6 @@ namespace top
                 //update meta right now
                 update_meta();
                 return true;
-            }
-            else if( (exist_cert) && (exist_cert->check_block_flag(base::enum_xvblock_flag_stored) == false) )
-            {
-                //give chance to store raw block even found duplicated indexx
-                write_block(exist_cert(),new_raw_block);
             }
 
             xinfo("xblockacct_t::store_block,cache index fail.block=%s", new_raw_block->dump().c_str());
