@@ -1126,7 +1126,7 @@ namespace top
                         #endif
                         {
                             //write_block_to_db may do double-check whether raw block not stored yet
-                            write_block(final_cached_index,new_raw_block);
+                            write_block(final_cached_index);
                             
                             //we not save index seperately
                             final_cached_index->reset_modify_flag(); //clean up modified flags

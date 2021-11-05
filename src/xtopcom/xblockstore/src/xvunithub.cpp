@@ -217,7 +217,6 @@ namespace top
             }
 
             // firstly, check self index if has block stored
-            if (target_index->check_block_flag(base::enum_xvblock_flag_stored))//self has stored
             {
                 bool loaded_new_block = false;
                 if(target_index->get_this_block() == NULL) {  // load from db
@@ -259,7 +258,8 @@ namespace top
                     return raw_block_ptr;
                 }
             }
-            else if (target_index->has_parent_store() // secondly, if has parent block, try to load from parent block.
+            
+            if (target_index->has_parent_store() // secondly, if has parent block, try to load from parent block.
                 && (false == target_index->get_extend_cert().empty()) 
                 && (false == target_index->get_extend_data().empty()) )
             {
