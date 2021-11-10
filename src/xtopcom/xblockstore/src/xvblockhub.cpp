@@ -106,6 +106,9 @@ namespace top
                 return false; //nothing need recover since there not reboot yet
             }
             
+            if(0 == m_meta->_highest_cert_block_height)
+                return false; //nothing need recover for genesis
+            
             bool recovered_something = false;
             
             const int64_t min_recover_height = m_meta->_highest_cert_block_height + 1;
@@ -1161,7 +1164,8 @@ namespace top
                 xinfo("xblockacct_t::store_block,done for block,cache_size:%zu,new_raw_block=%s,dump=%s",m_all_blocks.size(), new_raw_block->dump().c_str(), dump().c_str());
                 
                 //update meta right now
-                update_meta();
+                if(new_raw_block->get_height() != 0)//genesis block might be created by load_index
+                    update_meta();
                 return true;
             }
 
