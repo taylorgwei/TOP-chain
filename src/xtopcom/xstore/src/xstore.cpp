@@ -284,10 +284,28 @@ const std::string xstore::get_value(const std::string &key) const {
     return value;
 }
 
-bool  xstore::find_values(const std::string & key,std::vector<std::string> & values)//support wild search
+bool  xstore::delete_values(std::vector<std::string> & to_deleted_keys)
 {
-    xassert(false);
-    return false;
+    std::map<std::string, std::string> empty_put;
+    return m_db->batch_change(empty_put, to_deleted_keys);
+}
+
+//prefix must start from first char of key
+bool   xstore::read_range(const std::string& prefix, std::vector<std::string>& values)
+{
+    return m_db->read_range(prefix,values);
+}
+ 
+//note:begin_key and end_key must has same style(first char of key)
+bool   xstore::delete_range(const std::string & begin_key,const std::string & end_key)
+{
+    return m_db->delete_range(begin_key,end_key);
+}
+
+//key must be readonly(never update after PUT),otherwise the behavior is undefined
+bool   xstore::single_delete(const std::string & target_key)//key must be readonly(never update after PUT),otherwise the behavior is undefined
+{
+    return m_db->single_delete(target_key);
 }
 
 } // namespace store
