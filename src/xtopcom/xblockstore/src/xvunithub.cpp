@@ -107,7 +107,6 @@ namespace top
                 xwarn_err("xvblockstore has closed at store_path=%s",m_store_path.c_str());\
                 return nullptr;\
             }\
-            XMETRICS_TIMER(metrics::blockstore_tick);\
             base::xvtable_t * target_table = base::xvchain_t::instance().get_table(account_vid.get_xvid()); \
             if (target_table == nullptr) { \
                 xwarn_err("xvblockstore invalid account=%s",account_vid.get_address().c_str());\
@@ -122,7 +121,6 @@ namespace top
                 xwarn_err("xvblockstore has closed at store_path=%s",m_store_path.c_str());\
                 return 0;\
             }\
-            XMETRICS_TIMER(metrics::blockstore_tick);\
             base::xvtable_t * target_table = base::xvchain_t::instance().get_table(account_vid.get_xvid()); \
             if (target_table == nullptr) { \
                 xwarn_err("xvblockstore invalid account=%s",account_vid.get_address().c_str());\
@@ -217,7 +215,6 @@ namespace top
             }
 
             // firstly, check self index if has block stored
-            if (target_index->check_block_flag(base::enum_xvblock_flag_stored))//self has stored
             {
                 bool loaded_new_block = false;
                 if(target_index->get_this_block() == NULL) {  // load from db
@@ -259,7 +256,8 @@ namespace top
                     return raw_block_ptr;
                 }
             }
-            else if (target_index->has_parent_store() // secondly, if has parent block, try to load from parent block.
+            
+            if (target_index->has_parent_store() // secondly, if has parent block, try to load from parent block.
                 && (false == target_index->get_extend_cert().empty()) 
                 && (false == target_index->get_extend_data().empty()) )
             {

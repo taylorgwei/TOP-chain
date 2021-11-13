@@ -16,9 +16,17 @@
 #endif
  
 #ifndef __PERSIST_SAVE_UNIT_WITHOUT_INDEX__
+    #define __PERSIST_SAVE_UNIT_WITHOUT_INDEX__
 #endif
 
-//#define __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
+#ifndef __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
+    #define __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
+#endif
+
+//XTODO,turn on __CACHE_RAW_BLOCK_PTR_AT_FIRST_PLACE__ to improve cache effect but need test memory usage first
+#ifndef __CACHE_RAW_BLOCK_PTR_AT_FIRST_PLACE__
+    //#define __CACHE_RAW_BLOCK_PTR_AT_FIRST_PLACE__
+#endif
 
 namespace top
 {
@@ -106,24 +114,42 @@ namespace top
             }
             
             if(0 == m_meta->_highest_cert_block_height)
-                return false; //nothing to recover for genesis block
+                return false; //nothing need recover for genesis
             
             bool recovered_something = false;
-            
-            const int64_t min_recover_height = m_meta->_highest_cert_block_height + 1;
-            const int64_t max_recover_height = min_recover_height + base::enum_account_save_meta_interval + 1;
-            for(int64_t i = min_recover_height; i <= max_recover_height; ++i)
+            if(m_meta->_highest_cert_block_height > 0)
             {
-                if(load_index(i) > 0)//load_index may update_meta as well
+                const int64_t min_recover_height = m_meta->_highest_cert_block_height + 1;
+                const int64_t max_recover_height = min_recover_height + base::enum_account_save_meta_interval + 1;
+                for(int64_t i = min_recover_height; i <= max_recover_height; ++i)
                 {
-                    recovered_something = true;
-                    xwarn("xblockacct_t::recover_meta,recover block at height=% " PRId64 " of account(%s)",i,get_address().c_str());
-                }
-                else//stop recover if not load any block
-                {
-                    break;
+                    if(load_index(i) > 0)//load_index may update_meta as well
+                    {
+                        recovered_something = true;
+                        xwarn("xblockacct_t::recover_meta,recover block at height=% " PRId64 " of account(%s)",i,get_address().c_str());
+                    }
+                    else//stop recover if not load any block
+                    {
+                        break;
+                    }
                 }
             }
+            
+            //try recover full_block from highest commit block
+            if(m_meta->_highest_commit_block_height > 0)
+            {
+                load_index(m_meta->_highest_commit_block_height);
+                base::xauto_ptr<base::xvbindex_t> latest_commit(query_latest_index(base::enum_xvblock_flag_committed));
+                if(latest_commit)//query_latest_index has been return a added-reference ptr
+                {
+                    if(latest_commit->get_height() > 0)
+                    {
+                        if(load_index(latest_commit->get_last_full_block_height()) > 0)
+                            xwarn("xblockacct_t::recover_meta,recover full_block at height=% " PRId64 " of account(%s)",latest_commit->get_last_full_block_height(),get_address().c_str());
+                    }
+                }
+            }
+            
             return recovered_something;
         }
  
@@ -205,10 +231,20 @@ namespace top
                         {
                             //at entry of quit we need make sure everything is consist
                             update_meta_metric(it->second);  //udate other meta and connect info
-                            if(it->second->check_modified_flag()) //store any modified blocks again
-                                write_index(it->second);//push event to mbus if need
-
-                            xdbg_info("xblockacct_t::clean_caches,index=%s",it->second->dump().c_str());
+                            
+                            //store any modified blocks again
+                            //may determine whether need do real save
+                            write_block(it->second);
+                            write_index(it->second);
+                            
+                            base::xvblock_t * raw_block = it->second->get_this_block();
+                            if(raw_block != NULL) //force to cleanup prev/next ptr if have
+                            {
+                                raw_block->reset_prev_block(NULL);
+                                raw_block->reset_next_block(NULL);
+                            }
+                            xdbg_info("xblockacct_t::clean_caches,blockptr=%llx,index=%s",it->second,it->second->dump().c_str());
+                            
                             it->second->close();//disconnect from prev-block and next-block
                             it->second->release_ref();
                         }
@@ -252,13 +288,22 @@ namespace top
                         auto & view_map = old_height_it->second;
                         for(auto it = view_map.begin(); it != view_map.end(); ++it)
                         {
-                            if(it->second->get_this_block() != NULL) //clean any block that just reference by index only
+                            if(it->second->check_store_flag(base::enum_index_store_flag_non_index) == false)
                             {
-                                if(it->second->get_this_block()->get_refcount() == 1)//no any other hold
+                                //normal case for block with index associated
+                                if(it->second->get_this_block() != NULL) //clean any block that just reference by index only
                                 {
-                                    it->second->reset_this_block(NULL);
-                                    cleaned_one = true;
-                                    xdbg_info("xblockacct_t::clean_caches,block=%s",it->second->dump().c_str());
+                                    if(it->second->get_this_block()->get_refcount() == 1)//no any other hold
+                                    {
+                                        xdbg_info("xblockacct_t::clean_caches,block=%s",it->second->dump().c_str());
+                                        
+                                        //store any modified blocks again if need
+                                        write_block(it->second);
+                                        write_index(it->second);
+                                        
+                                        it->second->reset_this_block(NULL);
+                                        cleaned_one = true;
+                                    }
                                 }
                             }
                         }
@@ -279,14 +324,13 @@ namespace top
                     auto & view_map  = height_it->second;
                     for(auto view_it = view_map.begin(); view_it != view_map.end(); ++view_it) //search from lower view#
                     {
+                        //at entry of close we need make sure everything is consist
+                        update_meta_metric(view_it->second);  //udate other meta and connect info
+                        
                         //at entry of quit we need make sure everything is consist
-                        if(view_it->second->check_modified_flag()) //has changed since last store
-                        {
-                            write_index(view_it->second);//save_block but disable trigger event
-                            #ifdef DEBUG
-                            xdbg_info("xblockacct_t::save_data,block=%s",view_it->second->dump().c_str());
-                            #endif
-                        }
+                        //may determine whether need do real save
+                        write_block(view_it->second);
+                        write_index(view_it->second);
                     }
                 }
             }
@@ -304,13 +348,14 @@ namespace top
                     {
                         //const uint64_t this_block_height = view_it->second->get_height();
                         //const int      this_block_flags  = view_it->second->get_block_flags();
-
-                        //at entry of quit we need make sure everything is consist
-                        update_meta_metric(view_it->second);  //udate other meta and connect info
-                        if(view_it->second->check_modified_flag()) //has changed since last store
-                            write_index(view_it->second);//save_block but disable trigger event
-
                         xdbg_info("xblockacct_t::close_blocks,block=%s",view_it->second->dump().c_str());
+                        
+                        //at entry of close we need make sure everything is consist
+                        update_meta_metric(view_it->second);  //udate other meta and connect info
+                        //may determine whether need do real save
+                        write_block(view_it->second);
+                        write_index(view_it->second);
+                        
 
                         view_it->second->close();//disconnect from prev-block and next-block,if have
                         view_it->second->release_ref();
@@ -1078,36 +1123,73 @@ namespace top
             base::xvbindex_t * final_cached_index = new_index(new_raw_block);//final_cached_ptr is a raw ptr that just valid at this moment
             if(final_cached_index != nullptr) //insert/update successful,or find duplicated one
             {
-                update_meta_metric(final_cached_index); //update other meta and connect info
-
-                //write_block_to_db may do double-check whether raw block not stored yet
-                write_block(final_cached_index,new_raw_block);
-
-                //try save index finally
-                if(final_cached_index->check_modified_flag()) //if has anything changed
-                {
-                    write_index(final_cached_index); //save index then
-                }
-
                 //update block_level for first block
                 if(m_meta->_block_level == (uint8_t)-1)
                 {
                     m_meta->_block_level = new_raw_block->get_block_level();
                 }
+                update_meta_metric(final_cached_index); //update other meta and connect info
+
+                #ifdef __CACHE_RAW_BLOCK_PTR_AT_FIRST_PLACE__
+                bool keep_raw_block_ptr = true; //init to cache raw block
+                #else
+                bool keep_raw_block_ptr = false;
+                #endif
+                if(final_cached_index->is_unit_address())
+                {
+                    //just store raw-block without index
+                    if(final_cached_index->check_store_flag(base::enum_index_store_flag_non_index))
+                    {
+                        keep_raw_block_ptr = true; //force keep raw block for non_index case
+                        if(final_cached_index->get_this_block() == NULL)
+                            final_cached_index->reset_this_block(new_raw_block);//force to bind raw block ptr
+                        
+                        #ifdef __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
+                        //lazy to save raw block unti committed or closing
+                        if(final_cached_index->check_block_flag(base::enum_xvblock_flag_committed))
+                        #endif
+                        {
+                            //write_block_to_db may do double-check whether raw block not stored yet
+                            write_block(final_cached_index);
+                            
+                            //we not save index seperately
+                            final_cached_index->reset_modify_flag(); //clean up modified flags
+                            //NOTE: raw_block ptr must be valid at all time
+                        }
+                    }
+                    else //model of store block and index
+                    {
+                        //write_block_to_db may do double-check whether raw block not stored yet
+                        write_block(final_cached_index,new_raw_block);
+                        
+                        #ifdef __LAZY_SAVE_UNIT_BLOCK_UNTIL_COMMIT__
+                        //lazy to save index unti committed or closing
+                        if(final_cached_index->check_block_flag(base::enum_xvblock_flag_committed))
+                        #endif
+                        {
+                            //try save index finally
+                            write_index(final_cached_index); //save index then
+                        }
+                        //Note: reset_this_block(NULL) here if want save memory more and not care cache effect
+                    }
+                }
+                else //instant save block and index for table/book blocks
+                {
+                    //write_block_to_db may do double-check whether raw block not stored yet
+                    write_block(final_cached_index,new_raw_block);
+                    write_index(final_cached_index); //save index then
+                }
 
                 xinfo("xblockacct_t::store_block,done for block,cache_size:%zu,new_raw_block=%s,dump=%s",m_all_blocks.size(), new_raw_block->dump().c_str(), dump().c_str());
                 
                 //update meta right now
-                if (new_raw_block->get_height() != 0) {
+                if(new_raw_block->get_height() != 0)//genesis block might be created by load_index
                     update_meta();
-                }
                 
+                if(false == keep_raw_block_ptr)
+                    final_cached_index->reset_this_block(NULL);
+
                 return true;
-            }
-            else if( (exist_cert) && (exist_cert->check_block_flag(base::enum_xvblock_flag_stored) == false) )
-            {
-                //give chance to store raw block even found duplicated indexx
-                write_block(exist_cert(),new_raw_block);
             }
 
             xinfo("xblockacct_t::store_block,cache index fail.block=%s", new_raw_block->dump().c_str());
@@ -1842,7 +1924,27 @@ namespace top
             base::xvbindex_t * cached_index_ptr = cache_index(new_idx(),height_view_map);
             if(cached_index_ptr != nullptr) //insert or updated successful
             {
+                if(cached_index_ptr->check_store_flag(base::enum_index_store_flag_non_index))
+                {
+                    base::xauto_ptr<base::xvblock_t> cloned_block(new_raw_block->clone_block());
+                    cloned_block->reset_modified_count();//clean modifed count as fresh start
+                    
+                    //sync flags from index to raw block
+                    if(cached_index_ptr->check_block_flag(base::enum_xvblock_flag_locked))
+                        cloned_block->set_block_flag(base::enum_xvblock_flag_locked);
+                    
+                    if(cached_index_ptr->check_block_flag(base::enum_xvblock_flag_committed))
+                        cloned_block->set_block_flag(base::enum_xvblock_flag_committed);
+                    
+                    //force to bind raw block ptr until block to commit or saved
+                    cached_index_ptr->reset_this_block(cloned_block());
+                }
+                else //directly link  raw block first
+                {
+                    cached_index_ptr->reset_this_block(new_raw_block);
+                }
                 cached_index_ptr->set_modified_flag(); //force set flag to store later
+                
                 //connect as chain,and check connected_flag and meta
                 connect_index(cached_index_ptr);//here may change index'status
                 //rebase forked blocks if have ,after connect_index
@@ -1894,7 +1996,13 @@ namespace top
                     if(prev_block->is_close() == false)//prev_block is still valid to use
                     {
                         update_meta_metric(prev_block);//update meta since block has change status
-                        write_index(prev_block); //not send db event
+                        
+                        if(prev_block->is_unit_address() == false)//update status for any other block on time
+                        {
+                            //may double check whether need save again
+                            write_block(prev_block);
+                            write_index(prev_block);
+                        }
                     }
                 }
                 prev_block->release_ref();//safe release now
@@ -1922,8 +2030,12 @@ namespace top
                 {
                     update_meta_metric(prev_prev_block);//update meta since block has change status
 
+                    //may double check whether need save again
+                    write_block(prev_prev_block);
+                    write_index(prev_prev_block);
+                    
+                    //push event at end
                     push_event(enum_blockstore_event_committed,prev_prev_block);//fire event for commit
-                    write_index(prev_prev_block); //trigger db event here if need
                 }
                 prev_prev_block->release_ref(); //safe release now
             }
@@ -2035,7 +2147,6 @@ namespace top
         {
             if(NULL == new_block_ptr)
             {
-                xassert(0);
                 return false;
             }
             
