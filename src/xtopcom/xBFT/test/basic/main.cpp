@@ -229,6 +229,24 @@ int main(int argc, const char * argv[])
     catch_system_signals();
     sleep(2); //let xtestshard finish initialization
 
+    base::xvaccount_t test_account_obj(test_account_address);
+    base::xvactmeta_t acct_met_out(test_account_obj);
+    base::xvactmeta_t acct_met_in(test_account_obj);
+    
+    base::xautostream_t<1024> _stream(base::xcontext_t::instance());
+    int writed_bytes = acct_met_out.serialize_to(_stream);
+    int read_bytes = acct_met_in.serialize_from(_stream);
+    xassert(writed_bytes == read_bytes);
+    
+    _stream.reset();
+    base::xvbindex_t vindx_in;
+    base::xvbindex_t vbindx_out;
+    vbindx_out.reset_account_addr(test_account_obj);
+    
+    writed_bytes = vbindx_out.serialize_to(_stream);
+    read_bytes = vindx_in.serialize_from(_stream);
+    vindx_in.reset_account_addr(test_account_obj);
+    xassert(writed_bytes == read_bytes);
     
     int total_txs = 0;
     bool stop_test = false;

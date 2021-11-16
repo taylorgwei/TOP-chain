@@ -160,6 +160,7 @@ namespace top
   
         void xvbindex_t::init()
         {
+            m_version           = 1;
             m_modified          = 0;
             m_closed            = 0;
             m_prev_index        = NULL;
@@ -200,6 +201,18 @@ namespace top
             xprintf(local_buf,sizeof(local_buf),"{xvbindex_t:account_id(%" PRIu64 "),account_addr=%s,height=%" PRIu64 ",viewid=%" PRIu64 ",next_viewid(%" PRIu64 "),  parent_height(%" PRIu64 "),block-flags=0x%x,store-flags=0x%x,refcount=%d,this=%p}",get_xvid(),get_account().c_str(), m_block_height,m_block_viewid,get_next_viewid(),m_parent_block_height,get_block_flags(),get_store_flags(), get_refcount(),this);
 
             return std::string(local_buf);
+        }
+    
+        //only allow reset it when index has empty address
+        bool   xvbindex_t::reset_account_addr(const xvaccount_t & addr)
+        {
+            if(get_address().empty() == false)
+            {
+                xerror("xvbindex_t::reset_account_addr,try to overwrite exist addr(%s) by new(%s)",get_address().c_str(),addr.get_address().c_str());
+                return false;
+            }
+            xvaccount_t::operator=(addr);
+            return true;
         }
  
         void    xvbindex_t::reset_next_viewid_offset(const int32_t next_viewid_offset)
@@ -459,25 +472,54 @@ namespace top
         {
             const int32_t begin_size = stream.size();
             
-            stream.write_compact_var(get_account());
-            stream.write_compact_var(m_block_height);
-            stream.write_compact_var(m_block_viewid);
-            stream.write_compact_var(m_block_viewtoken);
-            stream.write_tiny_string(m_block_hash);
-            stream.write_tiny_string(m_last_block_hash);
-            stream.write_tiny_string(m_last_fullblock_hash);
-            stream.write_compact_var(m_last_fullblock_height);
-            stream.write_compact_var(m_next_viewid_offset);
-            
-            stream.write_compact_var(m_parent_block_height);
-            stream.write_compact_var(m_parent_block_viewid);
-            stream.write_compact_var(m_parent_block_entity_id);
-            stream.write_compact_var(m_extend_cert);
-            stream.write_compact_var(m_extend_data);
-
-            stream << m_combineflags;
-            stream << m_block_types;            
-            stream.write_compact_var(m_reserved);
+            if(m_version < 1) //old format
+            {
+                stream.write_compact_var(get_account());
+                stream.write_compact_var(m_block_height);
+                stream.write_compact_var(m_block_viewid);
+                stream.write_compact_var(m_block_viewtoken);
+                stream.write_tiny_string(m_block_hash);
+                stream.write_tiny_string(m_last_block_hash);
+                stream.write_tiny_string(m_last_fullblock_hash);
+                stream.write_compact_var(m_last_fullblock_height);
+                stream.write_compact_var(m_next_viewid_offset);
+                
+                stream.write_compact_var(m_parent_block_height);
+                stream.write_compact_var(m_parent_block_viewid);
+                stream.write_compact_var(m_parent_block_entity_id);
+                stream.write_compact_var(m_extend_cert);
+                stream.write_compact_var(m_extend_data);
+                
+                stream << m_combineflags;
+                stream << m_block_types;
+                stream.write_compact_var(m_reserved);
+            }
+            else //new format
+            {
+                std::string empty_addr;
+                stream.write_compact_var(empty_addr);
+                
+                stream << m_version;
+                stream << m_combineflags;
+                stream << m_block_types;
+                
+                //note:to reduce size,new version NOT save account address & m_last_fullblock_hash
+                stream.write_compact_var(m_block_height);
+                stream.write_compact_var(m_block_viewid);
+                stream.write_compact_var(m_block_viewtoken);
+                stream.write_compact_var(m_block_hash);
+                stream.write_compact_var(m_last_block_hash);
+                stream.write_compact_var(m_last_fullblock_height);
+                stream.write_compact_var(m_next_viewid_offset);
+                
+                stream.write_compact_var(m_parent_block_height);
+                stream.write_compact_var(m_parent_block_viewid);
+                stream.write_compact_var(m_parent_block_entity_id);
+                stream.write_compact_var(m_extend_cert);
+                stream.write_compact_var(m_extend_data);
+                
+                stream.write_compact_var(m_reserved);
+            }
             
             return (stream.size() - begin_size);
         }
@@ -489,27 +531,55 @@ namespace top
             {
                 std::string account_addr;
                 stream.read_compact_var(account_addr);
-                stream.read_compact_var(m_block_height);
-                stream.read_compact_var(m_block_viewid);
-                stream.read_compact_var(m_block_viewtoken);
-                stream.read_tiny_string(m_block_hash);
-                stream.read_tiny_string(m_last_block_hash);
-                stream.read_tiny_string(m_last_fullblock_hash);
-                stream.read_compact_var(m_last_fullblock_height);
-                stream.read_compact_var(m_next_viewid_offset);
-                
-                stream.read_compact_var(m_parent_block_height);
-                stream.read_compact_var(m_parent_block_viewid);
-                stream.read_compact_var(m_parent_block_entity_id);
-                stream.read_compact_var(m_extend_cert);
-                stream.read_compact_var(m_extend_data);
-
-                stream >> m_combineflags;
-                stream >> m_block_types;
-                stream.read_compact_var(m_reserved);
-                
-                //finally reset account information
-                xvaccount_t::operator=(account_addr);
+                if(account_addr.empty() == false) //old format
+                {
+                    stream.read_compact_var(m_block_height);
+                    stream.read_compact_var(m_block_viewid);
+                    stream.read_compact_var(m_block_viewtoken);
+                    stream.read_tiny_string(m_block_hash);
+                    stream.read_tiny_string(m_last_block_hash);
+                    stream.read_tiny_string(m_last_fullblock_hash);
+                    stream.read_compact_var(m_last_fullblock_height);
+                    stream.read_compact_var(m_next_viewid_offset);
+                    
+                    stream.read_compact_var(m_parent_block_height);
+                    stream.read_compact_var(m_parent_block_viewid);
+                    stream.read_compact_var(m_parent_block_entity_id);
+                    stream.read_compact_var(m_extend_cert);
+                    stream.read_compact_var(m_extend_data);
+                    
+                    stream >> m_combineflags;
+                    stream >> m_block_types;
+                    stream.read_compact_var(m_reserved);
+                    
+                    //finally reset account information
+                    xvaccount_t::operator=(account_addr);
+                }
+                else //new format
+                {
+                    //NOTE: to reduce size,we opt out account from stram,so caller MUST reassign account_addr into xvbindex later
+                    stream >> m_version;
+                    stream >> m_combineflags;
+                    stream >> m_block_types;
+                    xassert(m_version == 1);
+                    
+                    stream.read_compact_var(m_block_height);
+                    stream.read_compact_var(m_block_viewid);
+                    stream.read_compact_var(m_block_viewtoken);
+                    stream.read_compact_var(m_block_hash);
+                    stream.read_compact_var(m_last_block_hash);
+                    stream.read_compact_var(m_last_fullblock_height);
+                    stream.read_compact_var(m_next_viewid_offset);
+                    
+                    stream.read_compact_var(m_parent_block_height);
+                    stream.read_compact_var(m_parent_block_viewid);
+                    stream.read_compact_var(m_parent_block_entity_id);
+                    stream.read_compact_var(m_extend_cert);
+                    stream.read_compact_var(m_extend_data);
+                    
+                    stream.read_compact_var(m_reserved);
+                }
+            
             }catch (int error_code){
                 xerror("xvbindex_t::serialize_from,throw exception with error:%d",error_code);
             }

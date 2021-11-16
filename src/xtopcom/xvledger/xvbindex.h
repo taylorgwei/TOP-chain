@@ -52,7 +52,6 @@ namespace top
             inline const uint64_t       get_viewtoken()  const {return m_block_viewtoken;}
             inline const std::string &  get_block_hash()      const {return m_block_hash;}
             inline const std::string &  get_last_block_hash() const {return m_last_block_hash;}
-            inline const std::string &  get_last_full_block_hash()    const {return m_last_fullblock_hash;}
             inline const uint64_t       get_last_full_block_height()  const {return m_last_fullblock_height;}
             
             inline const int32_t        get_next_viewid_offset() const {return m_next_viewid_offset;}
@@ -108,6 +107,9 @@ namespace top
             inline bool        check_modified_flag() const { return (m_modified != 0);}
             void               set_modified_flag();
             void               reset_modify_flag();
+            
+            //only allow reset it when index has empty address
+            bool               reset_account_addr(const xvaccount_t & addr);
 
             bool               is_close() const { return (m_closed != 0);}
             bool               close(); //force close object and release linked objects
@@ -153,6 +155,7 @@ namespace top
             uint16_t        m_block_types;
             uint8_t         m_closed;           //indicated whether closed or not
             uint8_t         m_modified;         //indicated whether has any change that need persist again
+            uint8_t         m_version;          //version of data format
         };
 
         class xvbindex_vector

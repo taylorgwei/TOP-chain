@@ -392,6 +392,9 @@ namespace top
                 xdbg("xvblockdb_t::read_index_from_db,dont find main entry for height(%" PRIu64 ")",target_height);
                 return all_blocks_at_height;
             }
+            //NOTE:rebind account address into xvbindex
+            index_entry->reset_account_addr(account);
+            
             if(index_entry->check_store_flag(base::enum_index_store_flag_main_entry) == false)
             {
                 xerror("xvblockdb_t::read_index_from_db,a bad index that lost flag main_entry,index(%s)",index_entry->dump().c_str());
