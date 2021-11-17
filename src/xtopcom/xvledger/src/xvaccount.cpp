@@ -426,6 +426,11 @@ namespace top
             #else
             m_account_address = _account.get_xvid_str();
             #endif
+            
+            //XTODO,remove below assert when related xbase checked in main-branch
+            xassert(__XBASE_MAIN_VERSION_CODE__ >= 1);
+            xassert(__XBASE_FEATURE_VERSION_CODE__ >= 3);
+            xassert(__XBASE_MINOR_VERSION_CODE__ >= 8);
         }
         
         xvactmeta_t::xvactmeta_t(xvactmeta_t && obj)
