@@ -1135,7 +1135,7 @@ namespace top
                 #else
                 bool keep_raw_block_ptr = false;
                 #endif
-                if(final_cached_index->is_unit_address())
+                if(final_cached_index->is_table_address() == false)
                 {
                     //just store raw-block without index
                     if(final_cached_index->check_store_flag(base::enum_index_store_flag_non_index))

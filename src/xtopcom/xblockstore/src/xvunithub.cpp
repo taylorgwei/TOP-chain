@@ -180,7 +180,7 @@ namespace top
             #else
             
             xblockacct_t * new_plugin = NULL;
-            if(auto_account_ptr->is_unit_address())
+            if(auto_account_ptr->is_table_address() == false)
                 new_plugin =  new xunitbkplugin(*auto_account_ptr,timeout_for_block_plugin,m_xvblockdb_ptr);
             else
                 new_plugin =  new xtablebkplugin(*auto_account_ptr,timeout_for_block_plugin,m_xvblockdb_ptr);
