@@ -18,6 +18,23 @@ namespace top
            enum_txindex_type_receive  = 0x02,  // recv tx
            enum_txindex_type_confirm  = 0x04,  // confirm tx
        };
+    
+       enum enum_xdbkey_type
+       {
+           enum_xdbkey_type_unknow                  = 0,
+           
+           enum_xdbkey_type_account_meta            = 1,
+           enum_xdbkey_type_account_span            = 2,
+           enum_xdbkey_type_state                   = 3,
+           enum_xdbkey_type_transaction             = 4,
+           
+           enum_xdbkey_type_block_index             = 10,
+           enum_xdbkey_type_block_object            = 11,
+           enum_xdbkey_type_block_input             = 12,
+           enum_xdbkey_type_block_input_resource    = 13,
+           enum_xdbkey_type_block_output            = 14,
+           enum_xdbkey_type_block_output_resource   = 15,
+       };
 
        class xvdbkey_t
        {
@@ -28,6 +45,7 @@ namespace top
            static const std::string  get_txstore_version_key()          {return "/txstore/version";}
            static const std::string  get_constractstore_version_key()   {return "/constractstore/version";}
            
+           static enum_xdbkey_type   get_dbkey_type(const std::string & key);
         public://old definition,put here just for compatible purpose
            //tx index ->link to block index
            static const std::string  create_tx_key(const std::string & org_tx_hash); //where the raw tx are placed
@@ -54,6 +72,8 @@ namespace top
            static const std::string  create_account_meta_key(const xvaccount_t & account);
            static const std::string  create_account_span_key(const xvaccount_t & account);
            static const std::string  create_account_span_key(const xvaccount_t & account,const uint64_t target_height);
+           
+           static const std::string  create_prunable_state_key(const xvaccount_t & account,const uint64_t target_height);
            
            //all keys under of same height
            static const std::string  create_prunable_block_height_key(const xvaccount_t & account,const uint64_t target_height);
