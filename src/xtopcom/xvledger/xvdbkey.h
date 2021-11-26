@@ -23,10 +23,11 @@ namespace top
        {
            enum_xdbkey_type_unknow                  = 0,
            
-           enum_xdbkey_type_account_meta            = 1,
-           enum_xdbkey_type_account_span            = 2,
-           enum_xdbkey_type_state                   = 3,
-           enum_xdbkey_type_transaction             = 4,
+           enum_xdbkey_type_keyvalue                = 1,//general key-value,not specified type
+           enum_xdbkey_type_account_meta            = 2,
+           enum_xdbkey_type_account_span            = 3,
+           enum_xdbkey_type_state                   = 4,
+           enum_xdbkey_type_transaction             = 5,
            
            enum_xdbkey_type_block_index             = 10,
            enum_xdbkey_type_block_object            = 11,
