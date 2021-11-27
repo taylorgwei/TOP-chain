@@ -198,6 +198,8 @@ namespace top
             else if(key[1] != '/')
                 return enum_xdbkey_type_unknow;
             
+            type = enum_xdbkey_type_keyvalue;//at least a valid key
+            
             const char first_char = key[0];
             const char last_char  = key[key_length - 1];
             if(first_char == 'r') //new version
@@ -208,7 +210,7 @@ namespace top
                 switch(last_char)
                 {
                     case 'a':
-                        type = enum_xdbkey_type_state;
+                        type = enum_xdbkey_type_state_object;
                         break;
                     
                     case 'h':
@@ -219,16 +221,18 @@ namespace top
                         type = enum_xdbkey_type_block_object;
                         break;
                     
+                    /*note: input & output has been part of block object,so just remove entry
                     case 'i':
                         type = enum_xdbkey_type_block_input;
                         break;
                     
-                    case 'l':
-                        type = enum_xdbkey_type_block_input_resource;
-                        break;
-                        
                     case 'o':
                         type = enum_xdbkey_type_block_output;
+                        break;
+                    */
+                    
+                    case 'l':
+                        type = enum_xdbkey_type_block_input_resource;
                         break;
                         
                     case 'q':
@@ -262,6 +266,7 @@ namespace top
                     type = enum_xdbkey_type_block_object;
                     break;
                     
+                    /*note: input & output has been part of block object,so just remove entry
                     case 'i':
                     type = enum_xdbkey_type_block_input;
                     break;
@@ -269,9 +274,10 @@ namespace top
                     case 'o':
                     type = enum_xdbkey_type_block_output;
                     break;
+                    */
                     
                     case 's':
-                    type = enum_xdbkey_type_state;
+                    type = enum_xdbkey_type_state_object;
                     break;
                     
                     case 'r':
