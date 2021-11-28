@@ -22,6 +22,9 @@ namespace top
         
         const uint32_t    xsysobject_t::string_to_version(const std::string & ver_str)
         {
+            if(ver_str.empty())
+                return 0;
+            
             std::vector<std::string> parts;
             if(xstring_utl::split_string(ver_str, '.', parts) == 4)
             {
@@ -246,6 +249,158 @@ namespace top
             xauto_lock<xspinlock_t> locker(m_lock);
             m_keys_map[key_path] = key_value;
             return true;
+        }
+    
+        xvbootstrap_t::xvbootstrap_t()
+        {
+            set_object_type(xsysobject_t::enum_sys_object_type_bootstrap);
+        }
+    
+        xvbootstrap_t::~xvbootstrap_t()
+        {
+        }
+    
+        //caller respond to cast (void*) to related  interface ptr
+        void*  xvbootstrap_t::query_interface(const int32_t _enum_xobject_type_)
+        {
+            if(_enum_xobject_type_ == enum_sys_object_type_bootstrap)
+                return this;
+            
+            return xsysobject_t::query_interface(_enum_xobject_type_);
+        }
+        
+        xvmodule_t::xvmodule_t()
+        {
+            set_object_type(xsysobject_t::enum_sys_object_type_module);
+        }
+    
+        xvmodule_t::~xvmodule_t()
+        {
+        };
+        
+        //caller respond to cast (void*) to related  interface ptr
+        void*  xvmodule_t::query_interface(const int32_t _enum_xobject_type_)
+        {
+            if(_enum_xobject_type_ == enum_sys_object_type_module)
+                return this;
+            
+            return xsysobject_t::query_interface(_enum_xobject_type_);
+        }
+        
+        xvdaemon_t::xvdaemon_t()
+        {
+            set_object_type(xsysobject_t::enum_sys_object_type_daemon);
+        }
+        
+        xvdaemon_t::~xvdaemon_t()
+        {
+        }
+    
+        //caller respond to cast (void*) to related  interface ptr
+        void*  xvdaemon_t::query_interface(const int32_t _enum_xobject_type_)
+        {
+            if(_enum_xobject_type_ == enum_sys_object_type_daemon)
+                return this;
+            
+            return xsysobject_t::query_interface(_enum_xobject_type_);
+        }
+        
+        xvdriver_t::xvdriver_t()
+        {
+            set_object_type(xsysobject_t::enum_sys_object_type_driver);
+        }
+        
+        xvdriver_t::~xvdriver_t()
+        {
+            
+        }
+        
+        //caller respond to cast (void*) to related  interface ptr
+        void*  xvdriver_t::query_interface(const int32_t _enum_xobject_type_)
+        {
+            if(_enum_xobject_type_ == enum_sys_object_type_driver)
+                return this;
+            
+            return xsysobject_t::query_interface(_enum_xobject_type_);
+        }
+
+        xvsysinit_t::xvsysinit_t()
+        {
+            set_object_version(xvsysinit_t::get_register_version());
+        }
+    
+        xvsysinit_t::~xvsysinit_t()
+        {
+            for(size_t it = 0; it < m_boot_objects.size(); ++it)
+            {
+                xsysobject_t * obj_ptr = m_boot_objects[it];
+                if(obj_ptr != nullptr)
+                {
+                    obj_ptr->close();
+                    obj_ptr->release_ref();
+                }
+            }
+            m_boot_objects.clear();
+        }
+    
+        int  xvsysinit_t::init(const xvconfig_t & config_obj)
+        {
+            //step#1 : version check
+            const std::string system_version_str = config_obj.get_config("system.version");
+            if(system_version_str.empty())
+            {
+                xerror("xvsysinit_t::init,empty sytem version of config(%s)",config_obj.dump().c_str());
+                return enum_xerror_code_bad_version_code;
+            }
+            const uint32_t system_version = xsysobject_t::string_to_version(system_version_str);
+            if(is_valid(system_version) == false)
+            {
+                xerror("xvsysinit_t::init,invalid system version(%s) of config(%s)",system_version_str.c_str(), config_obj.dump().c_str());
+                return enum_xerror_code_bad_version_code;
+            }
+            
+            //step#2 : load boot items at order
+            const int boot_module_count = (int)xstring_utl::toint32(config_obj.get_config("system.boot.size"));
+            for(int i = 0; i < boot_module_count; ++i)
+            {
+                const std::string config_path = "system.boot." + xstring_utl::tostring(i);
+                const std::string object_key = config_obj.get_config(config_path + ".object_key");
+                const uint32_t object_version = xsysobject_t::string_to_version(config_obj.get_config(config_path + ".object_version"));
+                if(object_key.empty())
+                {
+                    xerror("xvsysinit_t::init,bad config(%s)",config_obj.dump().c_str());
+                    return enum_xerror_code_bad_config;
+                }
+                
+                xsysobject_t * boot_object = xvsyslibrary::instance().create_object(object_key,object_version);
+                if(nullptr == boot_object)
+                {
+                    xerror("xvsysinit_t::init,failed to load system object of key(%s) and version(0x%x)",object_key.c_str(),object_version);
+                    return enum_xerror_code_not_found;
+                }
+                
+                if(boot_object->init(config_obj) != enum_xcode_successful)
+                {
+                    xerror("xvsysinit_t::init,failed to init system object of key(%s) and version(0x%x)",object_key.c_str(),object_version);
+                    
+                    boot_object->close();
+                    boot_object->release_ref();
+                    return enum_xerror_code_fail;
+                }
+                m_boot_objects.push_back(boot_object);
+            }
+            
+            //step#3 : release unneed boot objects if have
+            for(size_t it = 0; it < m_boot_objects.size(); ++it)
+            {
+                if(m_boot_objects[it]->is_close())//just clean closed object
+                {
+                    m_boot_objects[it]->release_ref();
+                    m_boot_objects[it] = nullptr;
+                }
+            }
+            
+            return enum_xcode_successful;
         }
     
     }//end of namespace of base

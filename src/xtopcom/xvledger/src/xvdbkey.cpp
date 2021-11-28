@@ -296,6 +296,10 @@ namespace top
             {
                 type = enum_xdbkey_type_account_span;
             }
+            else if(first_char == '0')//old version
+            {
+                type = enum_xdbkey_type_account_meta;
+            }
             return type;
         }
 

@@ -14,7 +14,7 @@ namespace top
     {
         //*************************************xvfilter_t****************************************//
         xvfilter_t::xvfilter_t()
-            : xsysobject_t(enum_sys_object_type_plugin)
+            : xsysobject_t(enum_sys_object_type_filter)
         {
             m_front_filter = nullptr;
             m_back_filter  = nullptr;
@@ -22,7 +22,7 @@ namespace top
         }
     
         xvfilter_t::xvfilter_t(xvfilter_t * front_filter)
-          : xsysobject_t(enum_sys_object_type_plugin)
+          : xsysobject_t(enum_sys_object_type_filter)
         {
             m_front_filter = nullptr;
             m_back_filter  = nullptr;
@@ -34,7 +34,7 @@ namespace top
         }
     
         xvfilter_t::xvfilter_t(xvfilter_t * front_filter,xvfilter_t * back_filter)
-            : xsysobject_t(enum_sys_object_type_plugin)
+            : xsysobject_t(enum_sys_object_type_filter)
         {
             m_front_filter = nullptr;
             m_back_filter  = nullptr;
@@ -86,6 +86,15 @@ namespace top
                 }
             }
             return true;
+        }
+    
+        //caller respond to cast (void*) to related  interface ptr
+        void*  xvfilter_t::query_interface(const int32_t _enum_xobject_type_)
+        {
+            if(_enum_xobject_type_ == enum_sys_object_type_filter)
+                return this;
+            
+            return xsysobject_t::query_interface(_enum_xobject_type_);
         }
     
         bool xvfilter_t::reset_front_filter(xvfilter_t * front_filter)

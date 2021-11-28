@@ -16,10 +16,11 @@ namespace top
         {
             enum_xfilter_handle_code_bad_type       = -4, //invalid event types
             enum_xfilter_handle_code_closed         = -3, //filter has been closed
-            enum_xfilter_handle_code_interrupt      = -2, //stop pass and handle event
+            enum_xfilter_handle_code_interrupt      = -2, //stop pass event
             enum_xfilter_handle_code_error          = -1, //unknow error
             enum_xfilter_handle_code_success        = 0,  //success handle one
-            enum_xfilter_handle_code_finish         = 1,  //finish everything and may
+            enum_xfilter_handle_code_ignore         = 1,  //not implement,or not process
+            enum_xfilter_handle_code_finish         = 2,  //finish everything and may
         };
     
         //[8bit:category][4bit:op_code][4bit:key_type]
@@ -69,7 +70,8 @@ namespace top
             bool            reset_front_filter(xvfilter_t * front_filter);
             bool            reset_back_filter(xvfilter_t * front_filter);
             virtual bool    close(bool force_async = false) override; //must call close before release
-            
+            //caller respond to cast (void*) to related  interface ptr
+            virtual void*   query_interface(const int32_t _enum_xobject_type_) override;
         protected:
             xvfilter_t*     get_front() const {return m_front_filter;}
             xvfilter_t*     get_back()  const {return m_back_filter;}

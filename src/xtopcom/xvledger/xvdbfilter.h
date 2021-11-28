@@ -14,8 +14,8 @@ namespace top
         class xdbevent_t : public xvevent_t
         {
         public:
-            xdbevent_t(xvdbstore_t* db_store_ptr,enum_xdbevent_code code);
-            xdbevent_t(const std::string & db_key,const std::string & db_value,enum_xdbkey_type db_key_type,xvdbstore_t* db_store_ptr,enum_xdbevent_code code);
+            xdbevent_t(xvdbstore_t* src_db_ptr,xvdbstore_t* dst_db_ptr,enum_xdbevent_code code);
+            xdbevent_t(const std::string & db_key,const std::string & db_value,enum_xdbkey_type db_key_type,xvdbstore_t* src_db_ptr,xvdbstore_t* dst_db_ptr,enum_xdbevent_code code);
             virtual ~xdbevent_t();
         private:
             xdbevent_t();
@@ -30,17 +30,20 @@ namespace top
             inline const std::string &  get_db_key()   const {return m_db_key;}
             inline const std::string &  get_db_value() const {return m_db_value;}
             inline enum_xdbkey_type     get_db_key_type() const{return m_db_key_type;}
-            inline xvdbstore_t*         get_db_store() const {return m_db_store;}
+            inline xvdbstore_t*         get_db_store() const {return m_src_store_ptr;}
+            inline xvdbstore_t*         get_source_store() const {return m_src_store_ptr;}
+            inline xvdbstore_t*         get_target_store() const {return m_dst_store_ptr;}
             
         public: //for performance,let xdb operate db key & value directly
             inline std::string &        get_set_db_key()    {return m_db_key;}
             inline std::string &        get_set_db_value()  {return m_db_value;}
             inline enum_xdbkey_type&    get_set_db_type()   {return m_db_key_type;}
         private:
-            std::string         m_db_key;
-            std::string         m_db_value;
+            std::string         m_db_key;   //readed from m_src_store_ptr
+            std::string         m_db_value; //readed from m_src_store_ptr
             enum_xdbkey_type    m_db_key_type;
-            xvdbstore_t*        m_db_store; //note:just copy ptr without reference control
+            xvdbstore_t*        m_src_store_ptr; //note:just copy ptr without reference control
+            xvdbstore_t*        m_dst_store_ptr; //note:just copy ptr without reference control
         };
     
         class xdbfilter_t : public xvfilter_t
@@ -85,17 +88,17 @@ namespace top
         };
     
         //handle block
-        class xbksfilter_t : public xdbfilter_t
+        class xblkfilter_t : public xdbfilter_t
         {
         protected:
-            xbksfilter_t();
-            xbksfilter_t(xdbfilter_t * front_filter);
-            xbksfilter_t(xdbfilter_t * front_filter,xdbfilter_t * back_filter);
-            virtual ~xbksfilter_t();
+            xblkfilter_t();
+            xblkfilter_t(xdbfilter_t * front_filter);
+            xblkfilter_t(xdbfilter_t * front_filter,xdbfilter_t * back_filter);
+            virtual ~xblkfilter_t();
         private:
-            xbksfilter_t(xbksfilter_t &&);
-            xbksfilter_t(const xbksfilter_t &);
-            xbksfilter_t & operator = (const xbksfilter_t &);
+            xblkfilter_t(xblkfilter_t &&);
+            xblkfilter_t(const xblkfilter_t &);
+            xblkfilter_t & operator = (const xblkfilter_t &);
             
         protected:
             virtual enum_xfilter_handle_code    transfer_keyvalue(xdbevent_t & event,xvfilter_t* last_filter);
