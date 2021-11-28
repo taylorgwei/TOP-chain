@@ -14,6 +14,17 @@ namespace top
         class xdbevent_t : public xvevent_t
         {
         public:
+            enum enum_dbevent_flag : uint8_t
+            {
+                enum_dbevent_flag_key_migrated          = 0x01, //key has been done migrated
+                enum_dbevent_flag_txs_migrated          = 0x02, //tx  has been done migrated
+                enum_dbevent_flag_block_index_migrated  = 0x04, //block index  has been done migrated
+                enum_dbevent_flag_block_object_migrated = 0x08, //block object has been done migrated
+                
+                enum_dbevent_flag_block_unpacked        = 0x10, //block(like table) has been unpacked
+                enum_dbevent_flag_key_stored            = 0x20, //key has been stored to dest store
+            };
+        public:
             xdbevent_t(xvdbstore_t* src_db_ptr,xvdbstore_t* dst_db_ptr,enum_xdbevent_code code);
             xdbevent_t(const std::string & db_key,const std::string & db_value,enum_xdbkey_type db_key_type,xvdbstore_t* src_db_ptr,xvdbstore_t* dst_db_ptr,enum_xdbevent_code code);
             virtual ~xdbevent_t();
@@ -23,9 +34,12 @@ namespace top
             xdbevent_t(const xdbevent_t & obj);
             xdbevent_t& operator = (const xdbevent_t & obj);
             
-        public://Event_ID = [4bit:code][4bit:class]
-            static const int get_event_code(const int full_type) {return ((full_type >> 4) & 0x0F);}//4bit
-            const int        get_event_code()     const {return ((get_type() >> 4) & 0x0F);} //4bit
+        public:
+            //logicly split full_event_type = [8bit:Event_Category][8bit:Event_KEY]
+            //Event_KEY = [4bit:event_code][4bit:key_type]
+            //event_code refer enum_xdbevent_code
+            static const int get_event_code(const int full_type) {return (full_type & 0xF0);}//4bit
+            const int        get_event_code()     const {return ( get_type() & 0xF0);} //4bit
             
             inline const std::string &  get_db_key()   const {return m_db_key;}
             inline const std::string &  get_db_value() const {return m_db_value;}
@@ -39,11 +53,12 @@ namespace top
             inline std::string &        get_set_db_value()  {return m_db_value;}
             inline enum_xdbkey_type&    get_set_db_type()   {return m_db_key_type;}
         private:
+            xvdbstore_t*        m_src_store_ptr; //note:just copy ptr without reference control
+            xvdbstore_t*        m_dst_store_ptr; //note:just copy ptr without reference control
+            
             std::string         m_db_key;   //readed from m_src_store_ptr
             std::string         m_db_value; //readed from m_src_store_ptr
             enum_xdbkey_type    m_db_key_type;
-            xvdbstore_t*        m_src_store_ptr; //note:just copy ptr without reference control
-            xvdbstore_t*        m_dst_store_ptr; //note:just copy ptr without reference control
         };
     
         class xdbfilter_t : public xvfilter_t
@@ -58,7 +73,7 @@ namespace top
             xdbfilter_t(const xdbfilter_t &);
             xdbfilter_t & operator = (const xdbfilter_t &);
             
-        private: //triggered by push_event_back or push_event_front
+        protected: //triggered by push_event_back or push_event_front
             virtual enum_xfilter_handle_code fire_event(const xvevent_t & event,xvfilter_t* last_filter) override;
             using xvfilter_t::get_event_handlers;
         };

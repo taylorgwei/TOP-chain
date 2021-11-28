@@ -20,7 +20,7 @@ namespace top
             enum_xfilter_handle_code_error          = -1, //unknow error
             enum_xfilter_handle_code_success        = 0,  //success handle one
             enum_xfilter_handle_code_ignore         = 1,  //not implement,or not process
-            enum_xfilter_handle_code_finish         = 2,  //finish everything and may
+            enum_xfilter_handle_code_finish         = 2,  //finish everything
         };
     
         //[8bit:category][4bit:op_code][4bit:key_type]

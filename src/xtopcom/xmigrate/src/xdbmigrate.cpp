@@ -17,12 +17,16 @@ namespace top
         xmigratedb_t::xmigratedb_t(const std::string & db_path)
         {
             m_db_face_ptr = db::xdb_factory_t::create(db::xdb_kind_kvdb,db_path);
-            m_db_face_ptr->open();
         }
     
         xmigratedb_t::~xmigratedb_t()
         {
             m_db_face_ptr->close();
+        }
+    
+        bool  xmigratedb_t::open_db()
+        {
+            return m_db_face_ptr->open();
         }
     
         bool xmigratedb_t::set_value(const std::string &key, const std::string &value)
@@ -100,7 +104,7 @@ namespace top
                 m_src_store_ptr->close();
                 m_src_store_ptr->release_ref();
             }
-            if(m_dst_store_ptr != nullptr)
+            if( (m_dst_store_ptr != nullptr) && (m_dst_store_ptr != m_src_store_ptr) )
             {
                 m_dst_store_ptr->close();
                 m_dst_store_ptr->release_ref();
@@ -121,13 +125,35 @@ namespace top
             //step#1 : init & check
             const std::string src_db_path = config_obj.get_config(root_path + "/src_path");
             const std::string dst_db_path = config_obj.get_config(root_path + "/dst_path");
-            if(src_db_path.empty() || dst_db_path.empty())
+            if(src_db_path.empty())
             {
                 xerror("xdbmigrate_t::init,not found DB config at bad config(%s)",config_obj.dump().c_str());
                 return enum_xerror_code_bad_config;
             }
             
-            //step#2 : load filters at order
+            //step#2: construct src and target db
+            m_src_store_ptr = new xmigratedb_t(src_db_path);
+            if(m_src_store_ptr->open_db() == false)
+            {
+                xerror("xdbmigrate_t::init,failed to open src DB at path(%s)",src_db_path.c_str());
+                return enum_xerror_code_bad_config;
+            }
+            if( (src_db_path == dst_db_path) || (dst_db_path.empty()) )
+            {
+                m_src_store_ptr->add_ref();
+                m_dst_store_ptr = m_src_store_ptr;
+            }
+            else //seperated db
+            {
+                m_dst_store_ptr = new xmigratedb_t(dst_db_path);
+                if(m_dst_store_ptr->open_db() == false)
+                {
+                    xerror("xdbmigrate_t::init,failed to open dst DB at path(%s)",dst_db_path.c_str());
+                    return enum_xerror_code_bad_config;
+                }
+            }
+
+            //step#3 : load filters at order
             const int filters_count = (int)xstring_utl::toint32(config_obj.get_config(root_path + "/size"));
             for(int i = 0; i < filters_count; ++i)
             {
@@ -166,7 +192,7 @@ namespace top
                 m_filter_objects.push_back(filter_object);
             }
             
-            //step#3 : connect each filter together
+            //step#4 : connect each filter together
             if(m_filter_objects.size() > 0)
             {
                 xvfilter_t * front_filter = nullptr;
@@ -182,10 +208,6 @@ namespace top
                         front_filter = it;
                     }
                 }
-                
-                //step#4: construct src and target db
-                m_src_store_ptr = new xmigratedb_t(src_db_path);
-                m_dst_store_ptr = new xmigratedb_t(dst_db_path);
             }
             return enum_xcode_successful;
         }
@@ -219,13 +241,19 @@ namespace top
     
         bool  xdbmigrate_t::db_scan_callback(const std::string& key, const std::string& value)
         {
-            enum_xdbkey_type db_key_type = enum_xdbkey_type_keyvalue;
-            xdbevent_t db_event(key,value,db_key_type,m_src_store_ptr,m_dst_store_ptr,enum_xdbevent_code_transfer);
-     
-            //then carry real type
-            db_event.get_set_db_type() = xvdbkey_t::get_dbkey_type(key);
-            m_filter_objects[0]->push_event_back(db_event, nullptr);
-            return true;
+            if(m_filter_objects.empty() == false)
+            {
+                enum_xdbkey_type db_key_type = xvdbkey_t::get_dbkey_type(key);//carry real type
+                xdbevent_t db_event(key,value,db_key_type,m_src_store_ptr,m_dst_store_ptr,enum_xdbevent_code_transfer);
+                if(db_event.get_event_code() == enum_xdbevent_code_transfer)
+                {
+                    if(m_src_store_ptr == m_dst_store_ptr)//same store
+                        db_event.set_event_flag(xdbevent_t::enum_dbevent_flag_key_stored);
+                }
+                m_filter_objects[0]->push_event_back(db_event, nullptr);
+                return true;
+            }
+            return false;
         }
     
     }//end of namespace of base

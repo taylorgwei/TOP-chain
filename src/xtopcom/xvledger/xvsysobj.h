@@ -82,14 +82,14 @@ namespace top
             virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms){return true;}
         private:
             std::string     m_obj_key;
+            xvconfig_t*     m_config_ptr;  //reference the config object and may use later
+            xiobject_t*     m_raw_iobject; //bind iobject to given function related thread
             //The definition of version defintion = [8:Features][8:MAJOR][8:MINOR][8:PATCH]
             //Features: added new featurs that need most node agree then make it effect,refer BIP8 spec
                 //MAJOR： version when make incompatible
                 //MINOR： version when add functionality in a backwards compatible manner
                 //PATCH： version when make backwards compatible bug fixes.
             uint32_t        m_obj_version;
-            xvconfig_t*     m_config_ptr;  //reference the config object and may use later
-            xiobject_t*     m_raw_iobject; //bind iobject to given function related thread
         };
     
         typedef xsysobject_t* (*xnew_sysobj_function_t)(const uint32_t obj_ver);

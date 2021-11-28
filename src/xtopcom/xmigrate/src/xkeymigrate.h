@@ -28,7 +28,9 @@ namespace top
             //caller respond to cast (void*) to related  interface ptr
             virtual void*  query_interface(const int32_t _enum_xobject_type_) override;
             
+        protected: //triggered by push_event_back or push_event_front
             virtual enum_xfilter_handle_code  transfer_keyvalue(xdbevent_t & event,xvfilter_t* last_filter) override;
+            virtual enum_xfilter_handle_code  fire_event(const xvevent_t & event,xvfilter_t* last_filter) override;
         };
     
         template<uint32_t migrate_version>

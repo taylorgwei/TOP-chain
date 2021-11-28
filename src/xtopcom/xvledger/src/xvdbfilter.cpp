@@ -103,12 +103,20 @@ namespace top
         enum_xfilter_handle_code xkeyvfilter_t::on_keyvalue_transfer(const xvevent_t & event,xvfilter_t* last_filter)
         {
             xdbevent_t* db_event_ptr = (xdbevent_t*)&event;
-            return transfer_keyvalue(*db_event_ptr,last_filter);//transfer key first if need
+            
+            enum_xfilter_handle_code result = enum_xfilter_handle_code_ignore;
+            if(db_event_ptr->check_event_flag(xdbevent_t::enum_dbevent_flag_key_migrated) == false)
+            {
+                result = transfer_keyvalue(*db_event_ptr,last_filter);//transfer key first if need
+                if( (enum_xfilter_handle_code_success == result) || (enum_xfilter_handle_code_finish == result) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_key_migrated);
+            }
+            return result;
         }
     
         enum_xfilter_handle_code xkeyvfilter_t::transfer_keyvalue(xdbevent_t & event,xvfilter_t* last_filter)
         {
-            return enum_xfilter_handle_code_success;
+            return enum_xfilter_handle_code_ignore;
         }
  
         //*************************************xbksfilter_t****************************************//
@@ -136,32 +144,49 @@ namespace top
         enum_xfilter_handle_code xblkfilter_t::on_keyvalue_transfer(const xvevent_t & event,xvfilter_t* last_filter)
         {
             xdbevent_t* db_event_ptr = (xdbevent_t*)&event;
-            //transfer key first
-            enum_xfilter_handle_code result = transfer_keyvalue(*db_event_ptr,last_filter);
             
+            //transfer key first if need
+            enum_xfilter_handle_code result = enum_xfilter_handle_code_ignore;
+            if(db_event_ptr->check_event_flag(xdbevent_t::enum_dbevent_flag_key_migrated) == false)
+            {
+                result = transfer_keyvalue(*db_event_ptr,last_filter);
+                if( (enum_xfilter_handle_code_success == result) || (enum_xfilter_handle_code_finish == result) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_key_migrated);
+            }
+
             //then check whether need do more deeper handle
             if(db_event_ptr->get_db_key_type() == enum_xdbkey_type_block_index)
-                transfer_block_index(*db_event_ptr,last_filter);
+            {
+                const int subres = transfer_block_index(*db_event_ptr,last_filter);
+                if( (enum_xfilter_handle_code_success == subres) || (enum_xfilter_handle_code_finish == subres) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_block_index_migrated);
+            }
             else if(db_event_ptr->get_db_key_type() == enum_xdbkey_type_block_object)
-                transfer_block_object(*db_event_ptr,last_filter);
-
+            {
+                const int subres = transfer_block_object(*db_event_ptr,last_filter);
+                if( (enum_xfilter_handle_code_success == subres) || (enum_xfilter_handle_code_finish == subres) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_block_object_migrated);
+            }
             return result;
         }
     
         enum_xfilter_handle_code xblkfilter_t::transfer_keyvalue(xdbevent_t & event,xvfilter_t* last_filter)
         {
-            return enum_xfilter_handle_code_success;
+            return enum_xfilter_handle_code_ignore;
         }
     
         enum_xfilter_handle_code xblkfilter_t::on_block_index_transfer(const xvevent_t & event,xvfilter_t* last_filter)
         {
             xdbevent_t* db_event_ptr = (xdbevent_t*)&event;
  
-            enum_xfilter_handle_code result = transfer_block_index(*db_event_ptr,last_filter);
-            if(result != enum_xfilter_handle_code_ignore)
-                return result;
-            else //fail back to default handle
-                return transfer_keyvalue(*db_event_ptr,last_filter);
+            enum_xfilter_handle_code result = enum_xfilter_handle_code_ignore;
+            if(db_event_ptr->check_event_flag(xdbevent_t::enum_dbevent_flag_block_index_migrated) == false)
+            {
+                result = transfer_block_index(*db_event_ptr,last_filter);
+                if( (enum_xfilter_handle_code_success == result) || (enum_xfilter_handle_code_finish == result) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_block_index_migrated);
+            }
+            return result;
         }
     
         enum_xfilter_handle_code xblkfilter_t::transfer_block_index(xdbevent_t & event,xvfilter_t* last_filter)
@@ -173,18 +198,20 @@ namespace top
         {
             xdbevent_t* db_event_ptr = (xdbevent_t*)&event;
            
-            enum_xfilter_handle_code result = transfer_block_object(*db_event_ptr,last_filter);//then transfer block object
-            if(result != enum_xfilter_handle_code_ignore)
-                return result;
-            else //fail back to default handle
-                return transfer_keyvalue(*db_event_ptr,last_filter);
+            enum_xfilter_handle_code result = enum_xfilter_handle_code_ignore;
+            if(db_event_ptr->check_event_flag(xdbevent_t::enum_dbevent_flag_block_object_migrated) == false)
+            {
+                result = transfer_block_object(*db_event_ptr,last_filter);//then transfer block object
+                if( (enum_xfilter_handle_code_success == result) || (enum_xfilter_handle_code_finish == result) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_block_object_migrated);
+            }
+            return result;
         }
     
         enum_xfilter_handle_code   xblkfilter_t::transfer_block_object(xdbevent_t & event,xvfilter_t* last_filter)
         {
             return enum_xfilter_handle_code_ignore;
         }
-    
     
         //*************************************xtxsfilter_t****************************************//
         xtxsfilter_t::xtxsfilter_t()
@@ -211,31 +238,42 @@ namespace top
         enum_xfilter_handle_code xtxsfilter_t::on_keyvalue_transfer(const xvevent_t & event,xvfilter_t* last_filter)
         {
             xdbevent_t* db_event_ptr = (xdbevent_t*)&event;
-            //transfer key first
-            enum_xfilter_handle_code result = transfer_keyvalue(*db_event_ptr,last_filter);
-            
+            //transfer key first if need
+            enum_xfilter_handle_code result = enum_xfilter_handle_code_ignore;
+            if(db_event_ptr->check_event_flag(xdbevent_t::enum_dbevent_flag_key_migrated) == false)
+            {
+                result = transfer_keyvalue(*db_event_ptr,last_filter);
+                if( (enum_xfilter_handle_code_success == result) || (enum_xfilter_handle_code_finish == result) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_key_migrated);
+            }
+
             //then check whether need do more deeper handle
             if(db_event_ptr->get_db_key_type() == enum_xdbkey_type_transaction)
             {
-                transfer_tx(*db_event_ptr,last_filter);
+                const int subres = transfer_tx(*db_event_ptr,last_filter);
+                if( (enum_xfilter_handle_code_success == subres) || (enum_xfilter_handle_code_finish == subres) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_txs_migrated);
             }
             return result;
         }
     
         enum_xfilter_handle_code  xtxsfilter_t::transfer_keyvalue(xdbevent_t & event,xvfilter_t* last_filter)
         {
-            return enum_xfilter_handle_code_success;
+            return enum_xfilter_handle_code_ignore;
         }
         
         enum_xfilter_handle_code xtxsfilter_t::on_tx_transfer(const xvevent_t & event,xvfilter_t* last_filter)
         {
             xdbevent_t* db_event_ptr = (xdbevent_t*)&event;
            
-            enum_xfilter_handle_code result = transfer_tx(*db_event_ptr,last_filter);
-            if(result != enum_xfilter_handle_code_ignore)
-                return result;
-            else //fail back default handle
-                return transfer_keyvalue(*db_event_ptr,last_filter);
+            enum_xfilter_handle_code result = enum_xfilter_handle_code_ignore;
+            if(db_event_ptr->check_event_flag(xdbevent_t::enum_dbevent_flag_txs_migrated) == false)
+            {
+                result = transfer_tx(*db_event_ptr,last_filter);
+                if( (enum_xfilter_handle_code_success == result) || (enum_xfilter_handle_code_finish == result) )
+                    db_event_ptr->set_event_flag(xdbevent_t::enum_dbevent_flag_txs_migrated);
+            }
+            return result;
         }
     
         enum_xfilter_handle_code   xtxsfilter_t::transfer_tx(xdbevent_t & event,xvfilter_t* last_filter)

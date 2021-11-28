@@ -53,8 +53,8 @@ namespace top
             virtual bool             get_vblock_input(const std::string & store_path,base::xvblock_t* for_block)  const override{return false;}
             virtual bool             get_vblock_output(const std::string & store_path,base::xvblock_t* for_block) const override{return false;}
         public:
+            bool    open_db();
             virtual std::string      get_store_path() const  override {return m_store_path;}
- 
         private:
             std::string              m_store_path;
             std::shared_ptr<db::xdb_face_t> m_db_face_ptr;

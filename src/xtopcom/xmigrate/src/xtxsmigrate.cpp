@@ -41,15 +41,22 @@ namespace top
             if(get_object_version() > 0)
             {
                 //XTODO add code for specific version
-                if(event.get_target_store() != nullptr)
-                    event.get_target_store()->set_value(event.get_db_key(), event.get_db_value());
             }
 
-            return enum_xfilter_handle_code_success;
+            if(event.check_event_flag(xdbevent_t::enum_dbevent_flag_key_stored) == false)
+            {
+                if(event.get_target_store() != nullptr)
+                {
+                    if(event.get_target_store()->set_value(event.get_db_key(), event.get_db_value()))
+                        event.set_event_flag(xdbevent_t::enum_dbevent_flag_key_stored);
+                }
+            }
+            return enum_xfilter_handle_code_ignore;
         }
     
         enum_xfilter_handle_code xtxsmigrate_t::transfer_tx(xdbevent_t & event,xvfilter_t* last_filter)
         {
+            //XTODO add code to migrate tx
             return enum_xfilter_handle_code_success;
         }
             
