@@ -265,6 +265,7 @@ namespace top
         public:
             virtual int  init(const xvconfig_t & config_obj) override;
         private:
+            xvconfig_t*                 m_sys_config;
             std::vector<xsysobject_t*>  m_boot_objects;
         };
     

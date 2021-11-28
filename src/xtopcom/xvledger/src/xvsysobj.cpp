@@ -326,6 +326,7 @@ namespace top
 
         xvsysinit_t::xvsysinit_t()
         {
+            m_sys_config = nullptr;
             set_object_version(xvsysinit_t::get_register_version());
         }
     
@@ -341,10 +342,19 @@ namespace top
                 }
             }
             m_boot_objects.clear();
+            
+            if(m_sys_config != nullptr)
+                m_sys_config->release_ref();
         }
     
         int  xvsysinit_t::init(const xvconfig_t & config_obj)
         {
+            if(nullptr == m_sys_config) //hold reference of configure
+            {
+                m_sys_config = (xvconfig_t*)&config_obj;
+                m_sys_config->add_ref();
+            }
+ 
             //step#1 : version check
             const std::string system_version_str = config_obj.get_config("system.version");
             if(system_version_str.empty())
