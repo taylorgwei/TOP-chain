@@ -62,7 +62,7 @@ namespace top
             if(target_handler != nullptr)
                 return (*target_handler)(event,last_filter);
             
-            return enum_xfilter_handle_code_success;
+            return enum_xfilter_handle_code_ignore;
         }
     
         enum_xfilter_handle_code xkeymigrate_t::transfer_keyvalue(xdbevent_t & event,xvfilter_t* last_filter)

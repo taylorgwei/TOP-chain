@@ -200,7 +200,7 @@ namespace top
             if(target_handler != nullptr)
                 return (*target_handler)(event,last_filter);
             
-            return enum_xfilter_handle_code_success;
+            return enum_xfilter_handle_code_ignore;
         }
     
         bool   xvfilter_t::register_event(const uint16_t full_event_key,const xevent_handler & api_function)
