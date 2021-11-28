@@ -114,7 +114,10 @@ namespace top
         
         int   xdbmigrate_t::init(const xvconfig_t & config_obj)
         {
+            //step#0: prepare config
+            xvmigrate_t::init(config_obj);
             const std::string root_path = get_register_key();//"/init/migrate/db"
+            
             //step#1 : init & check
             const std::string src_db_path = config_obj.get_config(root_path + "/src_path");
             const std::string dst_db_path = config_obj.get_config(root_path + "/dst_path");
@@ -183,11 +186,29 @@ namespace top
                 //step#4: construct src and target db
                 m_src_store_ptr = new xmigratedb_t(src_db_path);
                 m_dst_store_ptr = new xmigratedb_t(dst_db_path);
+            }
+            return enum_xcode_successful;
+        }
+        
+        bool  xdbmigrate_t::start(const int32_t at_thread_id)
+        {
+            //start filters first
+            for(auto it : m_filter_objects)
+            {
+                it->start(at_thread_id);
+            }
+            //then start scan whole db
+            return xvmigrate_t::start(at_thread_id);
+        }
+        
+        bool  xdbmigrate_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
+        {
+            if(m_src_store_ptr != nullptr)
+            {
                 //scan all keys
                 m_src_store_ptr->read_range("", db_scan_callback,this);
             }
-            
-            return enum_xcode_successful;
+            return true;
         }
     
         bool  xdbmigrate_t::db_scan_callback(const std::string& key, const std::string& value,void*cookie)

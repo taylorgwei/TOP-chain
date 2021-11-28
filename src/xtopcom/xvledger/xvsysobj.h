@@ -59,8 +59,8 @@ namespace top
             
         public:
             virtual bool  is_valid(const uint32_t obj_ver); //check version
-            virtual int   init(const xvconfig_t & config){return enum_xerror_code_not_implement;} //init entry
-            virtual bool  run(const int32_t at_thread_id); //on-demand start thread and run on it
+            virtual int   init(const xvconfig_t & config);//init entry
+            virtual bool  start(const int32_t at_thread_id = 0); //on-demand start thread if at_thread_id !=0
             virtual std::string get_obj_name() const override {return m_obj_key;}
 
             inline const int    get_object_type() const { return get_obj_type();}
@@ -77,7 +77,9 @@ namespace top
             const uint64_t       get_time_now();
             const int32_t        get_thread_id() const; //0 means no-bind to any thread yet
             xcontext_t*          get_context() const;
-            
+            const xvconfig_t*    get_config()  const {return m_config_ptr;}
+        protected://process
+            virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms){return true;}
         private:
             std::string     m_obj_key;
             //The definition of version defintion = [8:Features][8:MAJOR][8:MINOR][8:PATCH]
@@ -86,6 +88,7 @@ namespace top
                 //MINOR： version when add functionality in a backwards compatible manner
                 //PATCH： version when make backwards compatible bug fixes.
             uint32_t        m_obj_version;
+            xvconfig_t*     m_config_ptr;  //reference the config object and may use later
             xiobject_t*     m_raw_iobject; //bind iobject to given function related thread
         };
     
@@ -185,6 +188,8 @@ namespace top
         public:
             //caller respond to cast (void*) to related  interface ptr
             virtual void*  query_interface(const int32_t _enum_xobject_type_) override;
+        protected:
+            virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms) override;
         };
 
         //logic wrap of logic and functions
@@ -203,6 +208,8 @@ namespace top
         public:
             //caller respond to cast (void*) to related  interface ptr
             virtual void*  query_interface(const int32_t _enum_xobject_type_) override;
+        protected:
+            virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms) override;
         };
     
         //virutal daemone running background
@@ -221,6 +228,8 @@ namespace top
         public:
             //caller respond to cast (void*) to related  interface ptr
             virtual void*  query_interface(const int32_t _enum_xobject_type_) override;
+        protected:
+            virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms) override;
         };
     
         //virtual network,disk and log driver
@@ -239,6 +248,8 @@ namespace top
         public:
             //caller respond to cast (void*) to related  interface ptr
             virtual void*  query_interface(const int32_t _enum_xobject_type_) override;
+        protected:
+            virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms) override;
         };
     
         //bootstrap object that load whole chain system
@@ -263,9 +274,11 @@ namespace top
             xvsysinit_t & operator = (const xvsysinit_t &);
             
         public:
-            virtual int  init(const xvconfig_t & config_obj) override;
+            virtual int   init(const xvconfig_t & config_obj) override;
+            virtual bool  start(const int32_t at_thread_id = 0) override;
+        protected:
+            virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms) override;
         private:
-            xvconfig_t*                 m_sys_config;
             std::vector<xsysobject_t*>  m_boot_objects;
         };
     

@@ -46,6 +46,7 @@ namespace top
         xsysobject_t::xsysobject_t()
         {
             m_obj_version = 0;
+            m_config_ptr  = nullptr;
             m_raw_iobject = nullptr;
         }
     
@@ -53,6 +54,7 @@ namespace top
             :xobject_t(_object_type)
         {
             m_obj_version = 0;
+            m_config_ptr  = nullptr;
             m_raw_iobject = nullptr;
         }
     
@@ -63,6 +65,18 @@ namespace top
                 m_raw_iobject->close(false);
                 m_raw_iobject->release_ref();
             }
+            if(m_config_ptr != nullptr)
+                m_config_ptr->release_ref();
+        }
+    
+        int   xsysobject_t::init(const xvconfig_t & config)
+        {
+            if(nullptr == m_config_ptr)//hold config reference
+            {
+                m_config_ptr = (xvconfig_t*)&config;
+                m_config_ptr->add_ref();
+            }
+            return enum_xcode_successful;
         }
     
         const uint64_t    xsysobject_t::get_time_now()
@@ -142,27 +156,44 @@ namespace top
             return false;
         }
     
-        bool   xsysobject_t::run(const int32_t at_thread_id)
+        bool   xsysobject_t::start(const int32_t at_thread_id)
         {
-            class _localiobject : public xiobject_t
+            if(at_thread_id > 0)
             {
-            public:
-                _localiobject(const int32_t at_thread_id)
+                xiothread_t* target_thread = xcontext_t::instance().get_thread(at_thread_id);
+                if(nullptr == target_thread)
+                {
+                    xerror("xsysobject_t::start,thread not existing for thread id(%d)",at_thread_id);
+                    return false;
+                }
+                class _localiobject : public xiobject_t
+                {
+                public:
+                    _localiobject(const int32_t at_thread_id)
                     :xiobject_t(xcontext_t::instance(),at_thread_id,enum_xobject_type_iobject)
+                    {
+                    }
+                    ~_localiobject(){}
+                };
+                xassert(nullptr == m_raw_iobject);
+                if(nullptr == m_raw_iobject)
                 {
-                }
-                ~_localiobject()
-                {
+                    m_raw_iobject = new _localiobject(at_thread_id);
                     
+                    auto on_start_function = [this](base::xcall_t & call, const int32_t cur_thread_id,const uint64_t timenow_ms)->bool{
+        
+                        run(cur_thread_id,timenow_ms); //run at thread
+                        return true;
+                    };
+                    base::xcall_t asyn_start_call(on_start_function,(base::xobject_t*)this);
+                    return (m_raw_iobject->send_call(asyn_start_call) == enum_xcode_successful);
                 }
-            };
-            
-            xassert(nullptr == m_raw_iobject);
-            if(nullptr == m_raw_iobject)
-            {
-                m_raw_iobject = new _localiobject(at_thread_id);
+                return false;
             }
-            return (m_raw_iobject != nullptr);
+            else //wait and finish it
+            {
+                return run(0,xtime_utl::time_now_ms());
+            }
         }
         
         bool  xvsyslibrary::register_object(const char * object_key,xnew_sysobj_function_t creator_func_ptr)
@@ -268,6 +299,11 @@ namespace top
             
             return xsysobject_t::query_interface(_enum_xobject_type_);
         }
+    
+        bool  xvbootstrap_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
+        {
+            return true;
+        }
         
         xvmodule_t::xvmodule_t()
         {
@@ -277,7 +313,7 @@ namespace top
         xvmodule_t::~xvmodule_t()
         {
         };
-        
+    
         //caller respond to cast (void*) to related  interface ptr
         void*  xvmodule_t::query_interface(const int32_t _enum_xobject_type_)
         {
@@ -286,7 +322,12 @@ namespace top
             
             return xsysobject_t::query_interface(_enum_xobject_type_);
         }
-        
+    
+        bool  xvmodule_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
+        {
+            return true;
+        }
+            
         xvdaemon_t::xvdaemon_t()
         {
             set_object_type(xsysobject_t::enum_sys_object_type_daemon);
@@ -295,7 +336,7 @@ namespace top
         xvdaemon_t::~xvdaemon_t()
         {
         }
-    
+        
         //caller respond to cast (void*) to related  interface ptr
         void*  xvdaemon_t::query_interface(const int32_t _enum_xobject_type_)
         {
@@ -305,6 +346,11 @@ namespace top
             return xsysobject_t::query_interface(_enum_xobject_type_);
         }
         
+        bool  xvdaemon_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
+        {
+            return true;
+        }
+        
         xvdriver_t::xvdriver_t()
         {
             set_object_type(xsysobject_t::enum_sys_object_type_driver);
@@ -312,7 +358,6 @@ namespace top
         
         xvdriver_t::~xvdriver_t()
         {
-            
         }
         
         //caller respond to cast (void*) to related  interface ptr
@@ -323,10 +368,14 @@ namespace top
             
             return xsysobject_t::query_interface(_enum_xobject_type_);
         }
+        
+        bool  xvdriver_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
+        {
+            return true;
+        }
 
         xvsysinit_t::xvsysinit_t()
         {
-            m_sys_config = nullptr;
             set_object_version(xvsysinit_t::get_register_version());
         }
     
@@ -342,18 +391,12 @@ namespace top
                 }
             }
             m_boot_objects.clear();
-            
-            if(m_sys_config != nullptr)
-                m_sys_config->release_ref();
         }
     
         int  xvsysinit_t::init(const xvconfig_t & config_obj)
         {
-            if(nullptr == m_sys_config) //hold reference of configure
-            {
-                m_sys_config = (xvconfig_t*)&config_obj;
-                m_sys_config->add_ref();
-            }
+            //step#0: prepare config
+            xvbootstrap_t::init(config_obj);
  
             //step#1 : version check
             const std::string system_version_str = config_obj.get_config("system.version");
@@ -411,6 +454,23 @@ namespace top
             }
             
             return enum_xcode_successful;
+        }
+    
+        bool  xvsysinit_t::start(const int32_t at_thread_id)
+        {
+            //start self first since it is boot entry
+            xvbootstrap_t::start(at_thread_id);
+            return true;
+        }
+    
+        bool  xvsysinit_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
+        {
+            //then launch each boot items
+            for(auto it : m_boot_objects)
+            {
+                it->start(cur_thread_id);
+            }
+            return true;
         }
     
     }//end of namespace of base

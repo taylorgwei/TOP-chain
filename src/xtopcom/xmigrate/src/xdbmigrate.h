@@ -73,9 +73,11 @@ namespace top
             xdbmigrate_t(const xdbmigrate_t &);
             xdbmigrate_t & operator = (const xdbmigrate_t &);
         public:
-            virtual bool  is_valid(const uint32_t obj_ver) override;//check version
-            virtual int   init(const xvconfig_t & config) override;//init config
+            virtual bool  is_valid(const uint32_t obj_ver)  override;//check version
+            virtual int   init(const xvconfig_t & config)   override;//init config
+            virtual bool  start(const int32_t at_thread_id) override;//start system object
         protected:
+            virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms) override;//process
             bool  db_scan_callback(const std::string& key, const std::string& value);
         private:
             xmigratedb_t*             m_src_store_ptr;//source db
