@@ -22,7 +22,9 @@ namespace top
                 enum_dbevent_flag_block_object_migrated = 0x08, //block object has been done migrated
                 
                 enum_dbevent_flag_block_unpacked        = 0x10, //block(like table) has been unpacked
-                enum_dbevent_flag_key_stored            = 0x20, //key has been stored to dest store
+                enum_dbevent_flag_block_stored          = 0x20, //whole block has been stored to dst db
+                enum_dbevent_flag_key_stored            = 0x40, //key has been stored to dst db
+                enum_dbevent_flag_txs_stored            = 0x80, //tx has been stored to dst db
             };
         public:
             xdbevent_t(xvdbstore_t* src_db_ptr,xvdbstore_t* dst_db_ptr,enum_xdbevent_code code);
