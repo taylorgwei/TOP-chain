@@ -188,7 +188,6 @@ int main(int argc, const char * argv[])
     sys_config_ptr->set_config("/init/migrate/db/0/object_key","/init/migrate/db/kvfilter");
     sys_config_ptr->set_config("/init/migrate/db/1/object_key","/init/migrate/db/blkfilter");
     sys_config_ptr->set_config("/init/migrate/db/2/object_key","/init/migrate/db/txsfilter");
-    
     top::base::init_migrate();
     
     top::base::xsysobject_t * init_module = top::base::xvsyslibrary::instance(). create_object(top::base::xvsysinit_t::get_register_key());
@@ -202,6 +201,7 @@ int main(int argc, const char * argv[])
         xassert(0);
         return -2;
     }
+    init_module->start();
     
     const std::string account_publick_addr = "1234567890abcdef";
     const std::string test_account_address =  top::base::xvaccount_t::make_account_address(top::base::enum_vaccount_addr_type_secp256k1_user_account, 0, account_publick_addr);
