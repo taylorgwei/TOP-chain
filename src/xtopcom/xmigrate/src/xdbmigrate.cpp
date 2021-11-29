@@ -16,17 +16,25 @@ namespace top
     {
         xmigratedb_t::xmigratedb_t(const std::string & db_path)
         {
+            m_store_path = db_path;
             m_db_face_ptr = db::xdb_factory_t::create(db::xdb_kind_kvdb,db_path);
+            xkinfo("xmigratedb_t::xmigratedb_t,db_path(%s)",db_path.c_str());
         }
     
         xmigratedb_t::~xmigratedb_t()
         {
+            xkinfo("xmigratedb_t::destroryed,db_path(%s)",m_store_path.c_str());
             m_db_face_ptr->close();
         }
     
         bool  xmigratedb_t::open_db()
         {
             return m_db_face_ptr->open();
+        }
+    
+        bool  xmigratedb_t::close_db()
+        {
+            return m_db_face_ptr->close();
         }
     
         bool xmigratedb_t::set_value(const std::string &key, const std::string &value)
@@ -84,10 +92,14 @@ namespace top
         {
             m_src_store_ptr = nullptr;
             m_dst_store_ptr = nullptr;
+            
+            xkinfo("xdbmigrate_t::xdbmigrate_t");
         }
         
         xdbmigrate_t::~xdbmigrate_t()
         {
+            xkinfo("xdbmigrate_t::desroyed");
+            
             for(auto it : m_filter_objects)
             {
                 xvfilter_t * obj_ptr = it;
@@ -101,12 +113,20 @@ namespace top
             
             if(m_src_store_ptr != nullptr)
             {
-                m_src_store_ptr->close();
+                if(m_src_store_ptr->is_close() == false)
+                {
+                    m_src_store_ptr->close_db();
+                    m_src_store_ptr->close();
+                }
                 m_src_store_ptr->release_ref();
             }
             if( (m_dst_store_ptr != nullptr) && (m_dst_store_ptr != m_src_store_ptr) )
             {
-                m_dst_store_ptr->close();
+                if(m_dst_store_ptr->is_close() == false)
+                {
+                    m_dst_store_ptr->close_db();
+                    m_dst_store_ptr->close();
+                }
                 m_dst_store_ptr->release_ref();
             }
         }
@@ -118,6 +138,14 @@ namespace top
         
         int   xdbmigrate_t::init(const xvconfig_t & config_obj)
         {
+            xkinfo("xdbmigrate_t::init");
+            
+            if(is_close()) //stop handle it while closed
+            {
+                xerror("xdbmigrate_t::init,moduled closed");
+                return enum_xerror_code_closed;
+            }
+            
             //step#0: prepare config
             xvmigrate_t::init(config_obj);
             const std::string root_path = get_register_key();//"/init/migrate/db"
@@ -209,27 +237,77 @@ namespace top
                     }
                 }
             }
+            
+            xkinfo("xdbmigrate_t::init,finised");
             return enum_xcode_successful;
         }
         
         bool  xdbmigrate_t::start(const int32_t at_thread_id)
         {
+            xkinfo("xdbmigrate_t::start");
+            if(is_close()) //stop handle it while closed
+            {
+                xerror("xdbmigrate_t::start,moduled closed");
+                return false;
+            }
+            
             //start filters first
             for(auto it : m_filter_objects)
             {
                 it->start(at_thread_id);
             }
             //then start scan whole db
-            return xvmigrate_t::start(at_thread_id);
+            bool result = xvmigrate_t::start(at_thread_id);
+            xkinfo("xdbmigrate_t::start,finished");
+            return result;
+        }
+    
+        bool  xdbmigrate_t::close(bool force_async) //close module
+        {
+            xkinfo("xdbmigrate_t::close");
+            if(is_close() == false)
+            {
+                xvmigrate_t::close(force_async);//mark closed flag first
+                
+                //close every filter
+                for(auto it : m_filter_objects)
+                {
+                    it->close(false);
+                }
+                
+                //then closed db instance
+                if(m_src_store_ptr != nullptr)
+                {
+                    if(m_src_store_ptr->close_db())
+                        m_src_store_ptr->close();
+                }
+                if( (m_dst_store_ptr != nullptr) && (m_dst_store_ptr != m_src_store_ptr) )
+                {
+                    if(m_dst_store_ptr->close_db())
+                        m_dst_store_ptr->close();
+                }
+            }
+            xkinfo("xdbmigrate_t::close,finished");
+            return true;
         }
         
         bool  xdbmigrate_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
         {
-            if(m_src_store_ptr != nullptr)
+            xkinfo("xdbmigrate_t::run");
+            if(is_close() == false)
             {
-                //scan all keys
-                m_src_store_ptr->read_range("", db_scan_callback,this);
+                if(m_src_store_ptr != nullptr)
+                {
+                    //scan all keys
+                    m_src_store_ptr->read_range("", db_scan_callback,this);
+                }
+                //add loop here if need continue running
+                
+                //exit this module
+                close();
             }
+            
+            xkinfo("xdbmigrate_t::run,finished");
             return true;
         }
     
@@ -241,6 +319,12 @@ namespace top
     
         bool  xdbmigrate_t::db_scan_callback(const std::string& key, const std::string& value)
         {
+            if(is_close()) //stop handle it while closed
+            {
+                xwarn("xdbmigrate_t::db_scan_callback,closed");
+                return false; //stop scan when return false
+            }
+               
             if(m_filter_objects.empty() == false)
             {
                 enum_xdbkey_type db_key_type = xvdbkey_t::get_dbkey_type(key);//carry real type

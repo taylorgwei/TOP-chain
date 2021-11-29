@@ -158,6 +158,7 @@ namespace top
     
         bool   xsysobject_t::start(const int32_t at_thread_id)
         {
+            xkinfo("xsysobject_t::start,at_thread_id(%d)",at_thread_id);
             if(at_thread_id > 0)
             {
                 xiothread_t* target_thread = xcontext_t::instance().get_thread(at_thread_id);
@@ -285,10 +286,12 @@ namespace top
         xvbootstrap_t::xvbootstrap_t()
         {
             set_object_type(xsysobject_t::enum_sys_object_type_bootstrap);
+            xkinfo("xvbootstrap_t::xvbootstrap_t");
         }
     
         xvbootstrap_t::~xvbootstrap_t()
         {
+            xkinfo("xvbootstrap_t::destroyed");
         }
     
         //caller respond to cast (void*) to related  interface ptr
@@ -308,10 +311,12 @@ namespace top
         xvmodule_t::xvmodule_t()
         {
             set_object_type(xsysobject_t::enum_sys_object_type_module);
+            xkinfo("xvmodule_t::xvmodule_t");
         }
     
         xvmodule_t::~xvmodule_t()
         {
+            xkinfo("xvmodule_t::destroyed");
         };
     
         //caller respond to cast (void*) to related  interface ptr
@@ -331,10 +336,12 @@ namespace top
         xvdaemon_t::xvdaemon_t()
         {
             set_object_type(xsysobject_t::enum_sys_object_type_daemon);
+            xkinfo("xvdaemon_t::xvdaemon_t");
         }
         
         xvdaemon_t::~xvdaemon_t()
         {
+            xkinfo("xvdaemon_t::destroyed");
         }
         
         //caller respond to cast (void*) to related  interface ptr
@@ -354,10 +361,12 @@ namespace top
         xvdriver_t::xvdriver_t()
         {
             set_object_type(xsysobject_t::enum_sys_object_type_driver);
+            xkinfo("xvdriver_t::xvdriver_t");
         }
         
         xvdriver_t::~xvdriver_t()
         {
+            xkinfo("xvdriver_t::destroyed");
         }
         
         //caller respond to cast (void*) to related  interface ptr
@@ -377,10 +386,12 @@ namespace top
         xvsysinit_t::xvsysinit_t()
         {
             set_object_version(xvsysinit_t::get_register_version());
+            xkinfo("xvsysinit_t::xvsysinit_t");
         }
     
         xvsysinit_t::~xvsysinit_t()
         {
+            xkinfo("xvsysinit_t::destroyed");
             for(size_t it = 0; it < m_boot_objects.size(); ++it)
             {
                 xsysobject_t * obj_ptr = m_boot_objects[it];
@@ -395,6 +406,14 @@ namespace top
     
         int  xvsysinit_t::init(const xvconfig_t & config_obj)
         {
+            xkinfo("xvsysinit_t::init");
+            
+            if(is_close()) //stop handle it while closed
+            {
+                xerror("xvsysinit_t::init,moduled closed");
+                return false;
+            }
+            
             //step#0: prepare config
             xvbootstrap_t::init(config_obj);
  
@@ -452,24 +471,57 @@ namespace top
                     m_boot_objects[it] = nullptr;
                 }
             }
-            
+            xkinfo("xvsysinit_t::init,finished");
             return enum_xcode_successful;
         }
     
         bool  xvsysinit_t::start(const int32_t at_thread_id)
         {
+            xkinfo("xvsysinit_t::start");
+            
+            if(is_close()) //stop handle it while closed
+            {
+                xerror("xvsysinit_t::start,moduled closed");
+                return false;
+            }
+            
             //start self first since it is boot entry
             xvbootstrap_t::start(at_thread_id);
+            
+            xkinfo("xvsysinit_t::start,finished");
             return true;
         }
     
         bool  xvsysinit_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
         {
+            xkinfo("xvsysinit_t::run");
+            
+            if(is_close()) //stop handle it while closed
+            {
+                xerror("xvsysinit_t::run,moduled closed");
+                return false;
+            }
+            
             //then launch each boot items
             for(auto it : m_boot_objects)
             {
-                it->start(cur_thread_id);
+                if(it != nullptr)
+                    it->start(cur_thread_id);
             }
+            //add loop here if continue running
+            
+            //quit from here
+            //clean closed object
+            for(size_t it = 0; it < m_boot_objects.size(); ++it)
+            {
+                if(m_boot_objects[it]->is_close())//
+                {
+                    m_boot_objects[it]->release_ref();
+                    m_boot_objects[it] = nullptr;
+                }
+            }
+            
+            xkinfo("xvsysinit_t::run,finished");
             return true;
         }
     

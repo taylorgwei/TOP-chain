@@ -11,10 +11,12 @@ namespace top
     {
         xtxsmigrate_t::xtxsmigrate_t()
         {
+            xkinfo("xtxsmigrate_t::xtxsmigrate_t");
         }
     
         xtxsmigrate_t:: ~xtxsmigrate_t()
         {
+            xkinfo("xtxsmigrate_t::destroyed");
         }
         
         bool  xtxsmigrate_t::is_valid(const uint32_t obj_ver) //check version
@@ -25,6 +27,18 @@ namespace top
         int   xtxsmigrate_t::init(const xvconfig_t & config_obj)
         {
             return enum_xcode_successful;
+        }
+    
+        bool  xtxsmigrate_t::close(bool force_async)//close filter
+        {
+            xkinfo("xtxsmigrate_t::close");
+            if(is_close() == false)
+            {
+                xtxsfilter_t::close(force_async); //mark closed flag first
+                //XTODO,add own clean logic
+            }
+            xkinfo("xtxsmigrate_t::close,finished");
+            return true;
         }
         
         //caller respond to cast (void*) to related  interface ptr
@@ -38,6 +52,12 @@ namespace top
     
         enum_xfilter_handle_code xtxsmigrate_t::transfer_keyvalue(xdbevent_t & event,xvfilter_t* last_filter)
         {
+            if(is_close())
+            {
+                xwarn("xtxsmigrate_t::transfer_keyvalue,closed");
+                return enum_xfilter_handle_code_closed;
+            }
+                
             if(get_object_version() > 0)
             {
                 //XTODO add code for specific version
@@ -56,6 +76,12 @@ namespace top
     
         enum_xfilter_handle_code xtxsmigrate_t::transfer_tx(xdbevent_t & event,xvfilter_t* last_filter)
         {
+            if(is_close())
+            {
+                xwarn("xtxsmigrate_t::transfer_keyvalue,closed");
+                return enum_xfilter_handle_code_closed;
+            }
+            
             //XTODO add code to migrate tx
             return enum_xfilter_handle_code_success;
         }

@@ -25,6 +25,7 @@ namespace top
         public:
             virtual bool  is_valid(const uint32_t obj_ver) override;//check version
             virtual int   init(const xvconfig_t & config)  override;//init config
+            virtual bool  close(bool force_async = false)  override;//close filter
             //caller respond to cast (void*) to related  interface ptr
             virtual void* query_interface(const int32_t _enum_xobject_type_) override;
             

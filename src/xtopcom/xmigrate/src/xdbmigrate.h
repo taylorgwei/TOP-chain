@@ -54,6 +54,7 @@ namespace top
             virtual bool             get_vblock_output(const std::string & store_path,base::xvblock_t* for_block) const override{return false;}
         public:
             bool    open_db();
+            bool    close_db();
             virtual std::string      get_store_path() const  override {return m_store_path;}
         private:
             std::string              m_store_path;
@@ -76,6 +77,7 @@ namespace top
             virtual bool  is_valid(const uint32_t obj_ver)  override;//check version
             virtual int   init(const xvconfig_t & config)   override;//init config
             virtual bool  start(const int32_t at_thread_id) override;//start system object
+            virtual bool  close(bool force_async = true)    override;//close module
         protected:
             virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms) override;//process
             bool  db_scan_callback(const std::string& key, const std::string& value);

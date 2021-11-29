@@ -11,10 +11,12 @@ namespace top
     {
         xkeymigrate_t::xkeymigrate_t()
         {
+            xkinfo("xkeymigrate_t::xkeymigrate_t");
         }
     
         xkeymigrate_t:: ~xkeymigrate_t()
         {
+            xkinfo("xkeymigrate_t::destroyed");
         }
         
         bool  xkeymigrate_t::is_valid(const uint32_t obj_ver) //check version
@@ -25,6 +27,18 @@ namespace top
         int   xkeymigrate_t::init(const xvconfig_t & config_obj)
         {
             return enum_xcode_successful;
+        }
+    
+        bool  xkeymigrate_t::close(bool force_async)//close filter
+        {
+            xkinfo("xkeymigrate_t::close");
+            if(is_close() == false)
+            {
+                xkeyvfilter_t::close(force_async); //mark closed flag first
+                //XTODO,add own clean logic
+            }
+            xkinfo("xkeymigrate_t::close,finished");
+            return true;
         }
     
         //caller respond to cast (void*) to related  interface ptr
@@ -38,6 +52,12 @@ namespace top
     
         enum_xfilter_handle_code  xkeymigrate_t::fire_event(const xvevent_t & event,xvfilter_t* last_filter)
         {
+            if(is_close())
+            {
+                xwarn("xkeymigrate_t::fire_event,closed");
+                return enum_xfilter_handle_code_closed;
+            }
+            
             if(event.get_event_category() != enum_xevent_category_db)
             {
                 xerror("xkeymigrate_t::fire_event,bad event category for event(0x%x)",event.get_type());
@@ -67,6 +87,12 @@ namespace top
     
         enum_xfilter_handle_code xkeymigrate_t::transfer_keyvalue(xdbevent_t & event,xvfilter_t* last_filter)
         {
+            if(is_close())
+            {
+                xwarn("xkeymigrate_t::transfer_keyvalue,closed");
+                return enum_xfilter_handle_code_closed;
+            }
+            
             if(get_object_version() > 0)
             {
                 //XTODO add code for specific version

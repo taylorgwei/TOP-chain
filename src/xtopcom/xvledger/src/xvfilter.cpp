@@ -19,6 +19,8 @@ namespace top
             m_front_filter = nullptr;
             m_back_filter  = nullptr;
             memset(m_event_handlers, NULL, sizeof(m_event_handlers));
+            
+            xkinfo("xvfilter_t::xvfilter_t");
         }
     
         xvfilter_t::xvfilter_t(xvfilter_t * front_filter)
@@ -31,6 +33,8 @@ namespace top
             m_front_filter = front_filter;
             if(front_filter != nullptr)
                 front_filter->add_ref();
+            
+            xkinfo("xvfilter_t::xvfilter_t");
         }
     
         xvfilter_t::xvfilter_t(xvfilter_t * front_filter,xvfilter_t * back_filter)
@@ -48,10 +52,14 @@ namespace top
             
             if(back_filter != nullptr)
                 back_filter->add_ref();
+            
+            xkinfo("xvfilter_t::xvfilter_t");
         }
     
         xvfilter_t::~xvfilter_t()
         {
+            xkinfo("xvfilter_t::destroyed");
+            
             if(m_front_filter != nullptr)
                 m_front_filter->release_ref();
             
@@ -68,6 +76,7 @@ namespace top
     
         bool xvfilter_t::close(bool force_async)//must call close before release
         {
+            xkinfo("xvfilter_t::close");
             if(is_close() == false)
             {
                 xsysobject_t::close(force_async); //mark closed first
@@ -85,6 +94,7 @@ namespace top
                     old_back_ptr->release_ref();
                 }
             }
+            xkinfo("xvfilter_t::close,finished");
             return true;
         }
     
@@ -189,6 +199,12 @@ namespace top
         
         enum_xfilter_handle_code xvfilter_t::fire_event(const xvevent_t & event,xvfilter_t* last_filter)
         {
+            if(is_close())
+            {
+                xwarn("xvfilter_t::fire_event,closed");
+                return enum_xfilter_handle_code_closed;
+            }
+            
             const uint8_t event_key = event.get_event_key();
             if(event_key >= enum_max_event_keys_count)
             {

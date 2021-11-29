@@ -58,6 +58,12 @@ namespace top
     
         enum_xfilter_handle_code xdbfilter_t::fire_event(const xvevent_t & event,xvfilter_t* last_filter)
         {
+            if(is_close())
+            {
+                xwarn("xdbfilter_t::fire_event,closed");
+                return enum_xfilter_handle_code_closed;
+            }
+            
             if(event.get_event_category() != enum_xevent_category_db)
             {
                 xerror("xdbfilter_t::fire_event,bad event category for event(0x%x)",event.get_type());
