@@ -710,6 +710,12 @@ bool xdb::single_delete(const std::string& key)
     XMETRICS_GAUGE(metrics::db_delete, ret ? 1 : 0);
     return ret;
 }
+ 
+//iterator each key of prefix.note: go throuh whole db if prefix is empty
+bool xdb::read_range(const std::string& prefix,xdb_iterator_callback callback,void * cookie)
+{
+    return m_db_impl->read_range(prefix, callback,cookie);
+}
 
 }  // namespace ledger
 }  // namespace top
