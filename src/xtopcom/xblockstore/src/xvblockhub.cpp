@@ -1884,7 +1884,11 @@ namespace top
                 new_idx->set_block_flag(base::enum_xvblock_flag_authenticated);//init it as  authenticated
                 new_idx->reset_modify_flag(); //remove modified flag to avoid double saving
 
-                load_index(new_idx->get_height()); //always load index first for non-genesis block
+                if(new_idx->get_height() <= m_meta->_highest_cert_block_height)//just load stored one
+                {
+                    if(new_idx->get_height() > m_meta->_highest_deleted_block_height)//just load undeleted one
+                        load_index(new_idx->get_height());
+                }
             }
             else//genesis block
             {
@@ -2047,7 +2051,7 @@ namespace top
                 push_event(enum_blockstore_event_committed,this_block);
 
             const uint64_t this_block_height = this_block->get_height();
-            if(this_block_height > 0)
+            if(this_block_height > m_meta->_highest_deleted_block_height)
             {
                 if(this_block_height >= 2)
                 {
