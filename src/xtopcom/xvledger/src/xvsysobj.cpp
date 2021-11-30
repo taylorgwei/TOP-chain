@@ -6,6 +6,7 @@
 #include "xvsysobj.h"
 #include "xbase/xutl.h"
 #include "xbase/xcontext.h"
+#include "xbase/xthread.h"
 
 namespace top
 {
@@ -385,6 +386,7 @@ namespace top
 
         xvsysinit_t::xvsysinit_t()
         {
+            m_monitor_timer = nullptr;
             set_object_version(xvsysinit_t::get_register_version());
             xkinfo("xvsysinit_t::xvsysinit_t");
         }
@@ -402,6 +404,13 @@ namespace top
                 }
             }
             m_boot_objects.clear();
+            
+            if(m_monitor_timer != nullptr)
+            {
+                m_monitor_timer->stop();
+                m_monitor_timer->close();
+                m_monitor_timer->release_ref();
+            }
         }
     
         int  xvsysinit_t::init(const xvconfig_t & config_obj)
@@ -492,6 +501,20 @@ namespace top
             return true;
         }
     
+        bool  xvsysinit_t::close(bool force_async) //must call close before release
+        {
+            if(is_close() == false)
+            {
+                xvbootstrap_t::close(force_async);//mark closed first
+                if(m_monitor_timer != nullptr)
+                {
+                    m_monitor_timer->stop();
+                    m_monitor_timer->close();
+                }
+            }
+            return true;
+        }
+    
         bool  xvsysinit_t::run(const int32_t cur_thread_id,const uint64_t timenow_ms)
         {
             xkinfo("xvsysinit_t::run");
@@ -508,20 +531,62 @@ namespace top
                 if(it != nullptr)
                     it->start(cur_thread_id);
             }
+            
+            if(nullptr == m_monitor_timer)
+            {
+                xiothread_t *_monitor_thread = nullptr;
+                if(cur_thread_id != 0)
+                    _monitor_thread = xcontext_t::instance().get_thread(cur_thread_id);
+                
+                if(nullptr == _monitor_thread)
+                {
+                    _monitor_thread = base::xcontext_t::instance().find_thread(base::xiothread_t::enum_xthread_type_monitor, false);
+                    if(NULL == _monitor_thread)
+                    {
+                        _monitor_thread = base::xiothread_t::create_thread(base::xcontext_t::instance(),base::xiothread_t::enum_xthread_type_monitor,-1);
+                    }
+                }
+                m_monitor_timer = _monitor_thread->create_timer(this);
+                m_monitor_timer->start(enum_monitor_boot_interval_ms, enum_monitor_boot_interval_ms); //check account by every 1 seconds
+            }
+            
             //add loop here if continue running
             
-            //quit from here
-            //clean closed object
+            xkinfo("xvsysinit_t::run,finished");
+            return true;
+        }
+    
+        bool  xvsysinit_t::on_timer_fire(const int32_t thread_id,const int64_t timer_id,const int64_t current_time_ms,const int32_t start_timeout_ms,int32_t & in_out_cur_interval_ms)
+        {
+            bool all_closed = true;
             for(size_t it = 0; it < m_boot_objects.size(); ++it)
             {
-                if(m_boot_objects[it]->is_close())//
+                if(m_boot_objects[it]->is_close())
                 {
                     m_boot_objects[it]->release_ref();
                     m_boot_objects[it] = nullptr;
                 }
+                else
+                {
+                    all_closed = false;
+                }
             }
             
-            xkinfo("xvsysinit_t::run,finished");
+            if(all_closed)
+            {
+                close(false); //close self
+                return false; //stop timer as well
+            }
+            return true;
+        }
+        
+        bool  xvsysinit_t::on_timer_start(const int32_t errorcode,const int32_t thread_id,const int64_t timer_id,const int64_t cur_time_ms,const int32_t timeout_ms,const int32_t timer_repeat_ms)   //attached into io-thread
+        {
+            return true;
+        }
+        
+        bool  xvsysinit_t::on_timer_stop(const int32_t errorcode,const int32_t thread_id,const int64_t timer_id,const int64_t cur_time_ms,const int32_t timeout_ms,const int32_t timer_repeat_ms)   //detach means it detach
+        {
             return true;
         }
     

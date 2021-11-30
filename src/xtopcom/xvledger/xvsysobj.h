@@ -6,6 +6,7 @@
 
 #include "xbase/xobject.h"
 #include "xbase/xlock.h"
+#include "xbase/xtimer.h"
 
 namespace top
 {
@@ -80,6 +81,7 @@ namespace top
             const xvconfig_t*    get_config()  const {return m_config_ptr;}
         protected://process
             virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms){return true;}
+            xiobject_t*          get_iobject() const {return m_raw_iobject;}
         private:
             std::string     m_obj_key;
             xvconfig_t*     m_config_ptr;  //reference the config object and may use later
@@ -253,7 +255,7 @@ namespace top
         };
     
         //bootstrap object that load whole chain system
-        class xvsysinit_t : public xvbootstrap_t,public xsyscreator<xvsysinit_t>
+        class xvsysinit_t : public xvbootstrap_t,public xtimersink_t,public xsyscreator<xvsysinit_t>
         {
             friend class xsyscreator<xvsysinit_t>;
         public:
@@ -265,6 +267,7 @@ namespace top
             {
                 return xsysobject_t::string_to_version("0.0.0.1");
             }
+            enum { enum_monitor_boot_interval_ms = 2000}; //every 2 seconds
         protected:
             xvsysinit_t();
             virtual ~xvsysinit_t();
@@ -276,9 +279,16 @@ namespace top
         public:
             virtual int   init(const xvconfig_t & config_obj) override;
             virtual bool  start(const int32_t at_thread_id = 0) override;
+            virtual bool  close(bool force_async = true) override; //must call close before release
         protected:
             virtual bool  run(const int32_t cur_thread_id,const uint64_t timenow_ms) override;
+            
+            //interface xtimersink_t
+            virtual bool            on_timer_start(const int32_t errorcode,const int32_t thread_id,const int64_t timer_id,const int64_t cur_time_ms,const int32_t timeout_ms,const int32_t timer_repeat_ms) override;   //attached into io-thread
+            virtual bool            on_timer_stop(const int32_t errorcode,const int32_t thread_id,const int64_t timer_id,const int64_t cur_time_ms,const int32_t timeout_ms,const int32_t timer_repeat_ms) override;   //detach means it detach
+            virtual bool            on_timer_fire(const int32_t thread_id,const int64_t timer_id,const int64_t current_time_ms,const int32_t start_timeout_ms,int32_t & in_out_cur_interval_ms) override;
         private:
+            xtimer_t*    m_monitor_timer;
             std::vector<xsysobject_t*>  m_boot_objects;
         };
     
