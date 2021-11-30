@@ -183,6 +183,9 @@ public:
     bool single_delete(const std::string& key);
     bool delete_range(const std::string& begin_key,const std::string& end_key);
     
+    //iterator each key of prefix.note: go throuh whole db if prefix is empty
+    bool read_range(const std::string& prefix,xdb_iterator_callback callback,void * cookie);
+    
     static void destroy(const std::string& m_db_name);
 
  private:
