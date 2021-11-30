@@ -22,6 +22,13 @@ struct xdb_meta_t {
     size_t      m_erase_count{0};
 };
 
+struct xdb_path_t {
+    std::string path;
+    uint64_t    target_size;  // Target size of total files under the path, in byte.
+    
+    xdb_path_t() : target_size(0) {}
+    xdb_path_t(const std::string& p, uint64_t t) : path(p), target_size(t) {}
+};
 
 class xdb_transaction_t {
 public:
