@@ -1884,7 +1884,8 @@ namespace top
                 new_idx->set_block_flag(base::enum_xvblock_flag_authenticated);//init it as  authenticated
                 new_idx->reset_modify_flag(); //remove modified flag to avoid double saving
 
-                load_index(new_idx->get_height()); //always load index first for non-genesis block
+                if(new_idx->get_height() <= m_meta->_highest_cert_block_height)
+                    load_index(new_idx->get_height()); //always load index first for non-genesis block
             }
             else//genesis block
             {
