@@ -620,6 +620,29 @@ bool xdb::xdb_impl::read_range(const std::string& prefix, std::vector<std::strin
     return ret;
 }
 
+//iterator each key of prefix.note: go throuh whole db if prefix is empty
+bool xdb::xdb_impl::read_range(const std::string& prefix,xdb_iterator_callback callback_fuc,void * cookie)
+{
+    bool ret = false;
+    rocksdb::ColumnFamilyHandle* target_cf = get_cf_handle(prefix);
+    
+    auto iter = m_db->NewIterator(rocksdb::ReadOptions(), target_cf);
+    for (iter->Seek(prefix); iter->Valid() && iter->key().starts_with(prefix); iter->Next())
+    {
+        const std::string std_key(iter->key().ToString());
+        const std::string std_value(iter->value().ToString());
+        if((*callback_fuc)(std_key,std_value,cookie) == false)
+        {
+            ret = false;
+            break;
+        }
+        ret = true;
+    }
+    delete iter;
+    return ret;
+}
+
+
 xdb::xdb(const std::string& db_root_dir,std::vector<xdb_path_t> & db_paths)
 : m_db_impl(new xdb_impl(db_root_dir,db_paths)) {
 }
