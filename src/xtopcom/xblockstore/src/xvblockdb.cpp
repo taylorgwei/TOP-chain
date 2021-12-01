@@ -428,6 +428,8 @@ namespace top
                 if(index_entry == NULL)
                     break;
                 
+                //NOTE:rebind account address into xvbindex
+                index_entry->reset_account_addr(account);
                 if(prunable_block)//verification
                 {
                     if( (index_entry->get_block_characters() & base::enum_xvblock_character_pruneable) == 0)
