@@ -223,6 +223,9 @@ void xdb::xdb_impl::setup_default_db_options(rocksdb::Options & default_db_optio
     default_db_options.create_missing_column_families = true;
     default_db_options.level_compaction_dynamic_level_bytes = true; //good for slow I/O disk(e.g HDD)
      
+    default_db_options.max_background_jobs = 4; //recommend 4 for HDD disk
+    default_db_options.max_subcompactions  = 2; //fast compact to clean deleted_range/deleted_keys
+    
     #ifdef __ENABLE_ROCKSDB_COMPRESSTION__
     //do nothing to keep defaut
     #else //disable compress
