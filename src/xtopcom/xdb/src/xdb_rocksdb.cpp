@@ -81,7 +81,12 @@ bool xdb_rocksdb_transaction_t::read(const std::string& key, std::string& value)
     if (m_txn == nullptr) {
         return false;
     }
-    rocksdb::Status s = m_txn->Get(rocksdb::ReadOptions(), rocksdb::Slice(key), &value);
+    
+    rocksdb::ReadOptions target_opt = rocksdb::ReadOptions();
+    target_opt.ignore_range_deletions = true; //ignored deleted_ranges to improve read performance
+    target_opt.verify_checksums = false; //application has own checksum
+    
+    rocksdb::Status s = m_txn->Get(target_opt, rocksdb::Slice(key), &value);
     if (!s.ok()) {
         if (s.IsNotFound()) {
             return true;
@@ -482,7 +487,11 @@ void xdb::xdb_impl::handle_error(const rocksdb::Status& status) const {
 bool xdb::xdb_impl::read(const std::string& key, std::string& value) const {
     rocksdb::ColumnFamilyHandle* target_cf = get_cf_handle(key);
     
-    rocksdb::Status s = m_db->Get(rocksdb::ReadOptions(), target_cf, rocksdb::Slice(key), &value);
+    rocksdb::ReadOptions target_opt = rocksdb::ReadOptions();
+    target_opt.ignore_range_deletions = true; //ignored deleted_ranges to improve read performance
+    target_opt.verify_checksums = false; //application has own checksum
+    
+    rocksdb::Status s = m_db->Get(target_opt, target_cf, rocksdb::Slice(key), &value);
     if (!s.ok()) {
         if (s.IsNotFound()) {
             return false;
@@ -612,8 +621,12 @@ bool xdb::xdb_impl::read_range(const std::string& prefix, std::vector<std::strin
  
     rocksdb::ColumnFamilyHandle* target_cf = get_cf_handle(prefix);
     
+    rocksdb::ReadOptions target_opt = rocksdb::ReadOptions();
+    target_opt.ignore_range_deletions = true; //ignored deleted_ranges to improve read performance
+    target_opt.verify_checksums = false; //application has own checksum
+    
     bool ret = false;
-    auto iter = m_db->NewIterator(rocksdb::ReadOptions(), target_cf);
+    auto iter = m_db->NewIterator(target_opt, target_cf);
 
     for (iter->Seek(prefix); iter->Valid() && iter->key().starts_with(prefix); iter->Next()) {
         values.push_back(iter->value().ToString());
@@ -629,7 +642,11 @@ bool xdb::xdb_impl::read_range(const std::string& prefix,xdb_iterator_callback c
     bool ret = false;
     rocksdb::ColumnFamilyHandle* target_cf = get_cf_handle(prefix);
     
-    auto iter = m_db->NewIterator(rocksdb::ReadOptions(), target_cf);
+    rocksdb::ReadOptions target_opt = rocksdb::ReadOptions();
+    target_opt.ignore_range_deletions = true; //ignored deleted_ranges to improve read performance
+    target_opt.verify_checksums = false; //application has own checksum
+    
+    auto iter = m_db->NewIterator(target_opt, target_cf);
     for (iter->Seek(prefix); iter->Valid() && iter->key().starts_with(prefix); iter->Next())
     {
         const std::string std_key(iter->key().ToString());
