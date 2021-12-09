@@ -1,6 +1,7 @@
 #pragma once
 
 #include "xbase/xobject_ptr.h"
+#include "xbasic/xtimer_driver.h"
 #include "xdb_util.h"
 #include "xdepends/include/json/config.h"
 #include "xdepends/include/json/value.h"
@@ -8,6 +9,7 @@
 #include "xmbus/xmessage_bus.h"
 #include "xstore/xstore_face.h"
 #include "xvledger/xvcnode.h"
+#include "xvledger/xvtxstore.h"
 
 NS_BEG2(top, db_export)
 
@@ -103,11 +105,13 @@ private:
     void set_confirmed_txinfo_to_json(json & j, const tx_ext_t & send_txinfo, const tx_ext_t & confirm_txinfo);
     void set_table_txdelay_time(xdbtool_table_info_t & table_info, const tx_ext_t & send_txinfo, const tx_ext_t & confirm_txinfo);
 
+    std::unique_ptr<xbase_timer_driver_t> m_timer_driver;
     xobject_ptr_t<mbus::xmessage_bus_face_t> m_bus;
     xobject_ptr_t<store::xstore_face_t> m_store;
     xobject_ptr_t<base::xvblockstore_t> m_blockstore;
     xobject_ptr_t<base::xvnodesrv_t> m_nodesvr_ptr;
     std::shared_ptr<rpc::xrpc_handle_face_t> m_getblock;
+    xobject_ptr_t<base::xvtxstore_t> m_txstore;
 };
 
 NS_END2

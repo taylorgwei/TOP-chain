@@ -17,6 +17,7 @@
 #include "xrpc/xgetblock/get_block.h"
 #include "xstake/xstake_algorithm.h"
 #include "xstore/xstore_face.h"
+#include "xtxstore/xtxstore_face.h"
 #include "xvledger/xvblock.h"
 #include "xvledger/xvledger.h"
 #include "xvm/manager/xcontract_manager.h"
@@ -40,11 +41,16 @@ xdb_export_tools_t::xdb_export_tools_t(std::string const & db_path) {
     top::config::config_register.get_instance().set(config::xroot_hash_configuration_t::name, std::string{});
     data::xrootblock_para_t para;
     data::xrootblock_t::init(para);
+    auto io_obj = std::make_shared<xbase_io_context_wrapper_t>();
+    m_timer_driver = make_unique<xbase_timer_driver_t>(io_obj);
     m_bus = top::make_object_ptr<mbus::xmessage_bus_t>(true, 1000);
     m_store = top::store::xstore_factory::create_store_with_kvdb(db_path);
     base::xvchain_t::instance().set_xdbstore(m_store.get());
     base::xvchain_t::instance().set_xevmbus(m_bus.get());
     m_blockstore.attach(store::get_vblockstore());
+    m_txstore = xobject_ptr_t<base::xvtxstore_t>(
+        txstore::create_txstore(top::make_observer<mbus::xmessage_bus_face_t>(m_bus.get()), 
+                                top::make_observer<xbase_timer_driver_t>(m_timer_driver.get())));
     m_nodesvr_ptr = make_object_ptr<xvnode_house_t>(common::xnode_id_t{NODE_ID}, SIGN_KEY, m_blockstore, make_observer(m_bus.get()));
     m_getblock = std::make_shared<chain_info::get_block_handle>(m_store.get(), m_blockstore.get(), nullptr);
     contract::xcontract_manager_t::instance().init(make_observer(m_store), xobject_ptr_t<store::xsyncvstore_t>{});
