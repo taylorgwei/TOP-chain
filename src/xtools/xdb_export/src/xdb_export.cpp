@@ -535,6 +535,10 @@ void xdb_export_tools_t::query_balance() {
 std::set<std::string> xdb_export_tools_t::query_db_unit_accounts() {
     std::set<std::string> accounts;
     std::ifstream file_stream("all_account.json");
+    if (!file_stream.good()) {
+        generate_db_unit_accounts_file_v2(accounts);
+        return;
+    }
     json j;
     file_stream >> j;
     if (!j.empty()) {
