@@ -20,6 +20,8 @@ enum xdb_kind_t {
     
     //compression/decompression control
     xdb_kind_high_compress  = 0x100, //high compression for data while persisting
+    xdb_kind_bottom_compress= 0x200, //only compress the bottom level
+    xdb_kind_no_compress    = 0x400, //disable copmression completely,useful for consensus node
 };
 
 // XTODO for test

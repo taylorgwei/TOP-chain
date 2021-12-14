@@ -220,8 +220,6 @@ void    xdb::xdb_impl::disable_default_compress_options(rocksdb::ColumnFamilyOpt
     //disable compression as default since consense node may prune data automatically
     default_db_options.compression = rocksdb::kNoCompression;
     default_db_options.compression_opts.enabled = false;
-    default_db_options.bottommost_compression = rocksdb::kNoCompression;
-    default_db_options.bottommost_compression_opts.enabled = false;
     //,compressiong bring much more CPU/IO,which means,so prefer CPU/IO first
     if(default_db_options.num_levels > 0)
     {
@@ -241,45 +239,56 @@ void xdb::xdb_impl::setup_default_db_options(rocksdb::Options & default_db_optio
     default_db_options.max_background_jobs = 4; //recommend 4 for HDD disk
     default_db_options.max_subcompactions  = 2; //fast compact to clean deleted_range/deleted_keys
     
-    #ifdef __ENABLE_ROCKSDB_COMPRESSTION__
-    
-        if((db_kinds & xdb_kind_high_compress) != 0)
-        {
-            default_db_options.compression = rocksdb::kLZ4Compression;
-            default_db_options.compression_opts.enabled = true;
-            default_db_options.bottommost_compression = rocksdb::kZSTD;
-            default_db_options.bottommost_compression_opts.enabled = true;
-            
-            xkinfo("xdb_impl::setup_default_db_options() as xdb_kind_high_compress");
-            printf("xdb_impl::setup_default_db_options() as xdb_kind_high_compress \n");
-        }
-        else //normal & medium compression
-        {
-            default_db_options.compression = rocksdb::kLZ4Compression;
-            default_db_options.compression_opts.enabled = true;
-            default_db_options.bottommost_compression = rocksdb::kLZ4Compression;
-            default_db_options.bottommost_compression_opts.enabled = true;
-            
-            xkinfo("xdb_impl::setup_default_db_options() as fast_compress");
-            printf("xdb_impl::setup_default_db_options() as fast_compress \n");
-        }
-    
-    #else //disable compress
+    if((db_kinds & xdb_kind_high_compress) != 0)
+    {
+        default_db_options.compression = rocksdb::kLZ4Compression;
+        default_db_options.compression_opts.enabled = true;
+        default_db_options.bottommost_compression = rocksdb::kZSTD;
+        default_db_options.bottommost_compression_opts.enabled = true;
+        
+        xkinfo("xdb_impl::setup_default_db_options() as xdb_kind_high_compress");
+        printf("xdb_impl::setup_default_db_options() as xdb_kind_high_compress \n");
+    }
+    else if((db_kinds & xdb_kind_bottom_compress) != 0) //disable level'compression but keep bottom one
+    {
+        default_db_options.compression = rocksdb::kNoCompression;
+        default_db_options.compression_opts.enabled = false;
+        default_db_options.bottommost_compression = rocksdb::kLZ4Compression;
+        default_db_options.bottommost_compression_opts.enabled = true;
+        
+        xkinfo("xdb_impl::setup_default_db_options() as xdb_kind_bottom_compress");
+        printf("xdb_impl::setup_default_db_options() as xdb_kind_bottom_compress \n");
+    }
+    else if((db_kinds & xdb_kind_no_compress) != 0) //disable compress
+    {
         default_db_options.compression = rocksdb::kNoCompression;
         default_db_options.compression_opts.enabled = false;
         default_db_options.bottommost_compression = rocksdb::kNoCompression;
         default_db_options.bottommost_compression_opts.enabled = false;
-    
-        xkinfo("xdb_impl::setup_default_db_options() as no_compress");
-        printf("xdb_impl::setup_default_db_options() as no_compress \n");
-    #endif
+        
+        xkinfo("xdb_impl::setup_default_db_options() as xdb_kind_no_compress");
+        printf("xdb_impl::setup_default_db_options() as xdb_kind_no_compress \n");
+    }
+    else //normal & default compression
+    {
+        default_db_options.compression = rocksdb::kLZ4Compression;
+        default_db_options.compression_opts.enabled = true;
+        default_db_options.bottommost_compression = rocksdb::kLZ4Compression;
+        default_db_options.bottommost_compression_opts.enabled = true;
+        
+        xkinfo("xdb_impl::setup_default_db_options() as default_compress");
+        printf("xdb_impl::setup_default_db_options() as default_compress \n");
+    }
+
     return ;
 }
 
 void xdb::xdb_impl::setup_default_cf_options(xColumnFamily & cf_config,const size_t block_size,std::shared_ptr<rocksdb::Cache> & block_cache)
 {
     rocksdb::BlockBasedTableOptions table_options;
-    table_options.enable_index_compression = false;
+    if((m_db_kinds & xdb_kind_no_compress) != 0)//performance most
+        table_options.enable_index_compression = false;
+    
     if(block_size > 0)
         table_options.block_size = block_size;
     if(block_cache != nullptr)
@@ -363,6 +372,18 @@ xColumnFamily xdb::xdb_impl::setup_level_style_cf(const std::string & name,uint6
     if(false == cf_config.cf_option.compression_opts.enabled)//force turn off for each level
     {
         xdb::xdb_impl::disable_default_compress_options(cf_config.cf_option);
+    }
+    else
+    {
+        for(size_t it = 0; it < cf_config.cf_option.compression_per_level.size(); ++it)
+        {
+            if(it < 3) //disable compression of level-0,1,2
+            {
+                cf_config.cf_option.compression_per_level[it] = rocksdb::kNoCompression;
+            }
+            xkinfo("xdb_impl::setup_level_style_cf,Options.compression[%d] = %d \n",(int)it,(int)cf_config.cf_option.compression_per_level[it]);
+            printf("xdb_impl::setup_level_style_cf,Options.compression[%d] = %d \n",(int)it,(int)cf_config.cf_option.compression_per_level[it]);
+        }
     }
     
     //XTODO,upgrade to RocksDB 6.x version
